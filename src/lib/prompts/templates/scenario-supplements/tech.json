@@ -1,0 +1,5 @@
+{
+  "id": "tech-supplement",
+  "scenario": "tech",
+  "additionalInstructions": "技能逐项拆分，项目 technologies 必填，提取技术细节"
+}

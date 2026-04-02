@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>手动测试 - 错误处理</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    .test { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+    .pass { background: #d4edda; }
+    .fail { background: #f8d7da; }
+  </style>
+</head>
+<body>
+  <h1>错误处理测试清单</h1>
+
+  <div class="test">
+    <h3>测试 1: 损坏的 PDF 文件</h3>
+    <p>步骤: 创建一个文本文件，重命名为 .pdf，然后上传</p>
+    <p>预期: 显示 "文件格式错误或已损坏，请检查文件是否完整"</p>
+    <label><input type="checkbox"> 通过</label>
+  </div>
+
+  <div class="test">
+    <h3>测试 2: 损坏的 DOCX 文件</h3>
+    <p>步骤: 创建一个文本文件，重命名为 .docx，然后上传</p>
+    <p>预期: 显示 "文件格式错误或已损坏，请检查文件是否完整"</p>
+    <label><input type="checkbox"> 通过</label>
+  </div>
+
+  <div class="test">
+    <h3>测试 3: 正常的 PDF 文件</h3>
+    <p>步骤: 上传一个正常的简历 PDF</p>
+    <p>预期: 正常解析，显示简历内容</p>
+    <label><input type="checkbox"> 通过</label>
+  </div>
+
+  <div class="test">
+    <h3>测试 4: 正常的 DOCX 文件</h3>
+    <p>步骤: 上传一个正常的简历 DOCX</p>
+    <p>预期: 正常解析，显示简历内容</p>
+    <label><input type="checkbox"> 通过</label>
+  </div>
+
+  <div class="test">
+    <h3>测试 5: 验证器类型安全</h3>
+    <p>步骤: 运行单元测试 npm test</p>
+    <p>预期: validators.test.ts 中的所有测试通过</p>
+    <label><input type="checkbox"> 通过</label>
+  </div>
+</body>
+</html>

@@ -1,0 +1,30 @@
+{
+  "app": {
+    "title": "简历解析系统",
+    "upload": "上传简历",
+    "processing": "处理中",
+    "success": "成功",
+    "failed": "失败"
+  },
+  "batch": {
+    "title": "批量上传",
+    "progress": "处理中: {{current}} / {{total}}",
+    "exportErrors": "导出错误报告",
+    "successCount": "成功: {{count}}",
+    "failedCount": "失败: {{count}}"
+  },
+  "metrics": {
+    "title": "性能指标",
+    "totalProcessed": "总处理数",
+    "successRate": "成功率",
+    "cacheHitRate": "缓存命中率",
+    "avgTime": "平均耗时"
+  },
+  "errors": {
+    "timeout": "超时",
+    "validation": "验证失败",
+    "parse": "解析错误",
+    "llm": "LLM错误",
+    "unknown": "未知错误"
+  }
+}
