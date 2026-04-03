@@ -9,6 +9,7 @@ import { runMigrations } from './db';
 import { authMiddleware } from './middleware/auth';
 import { rateLimitMiddleware } from './middleware/rateLimit';
 import { requestLoggerMiddleware } from './middleware/requestLogger';
+import { serverLogger } from './lib/logger';
 import { swaggerSpec } from './lib/swagger';
 import evaluationsRouter from './routes/evaluations';
 import annotationsRouter from './routes/annotations';
@@ -65,19 +66,56 @@ app.use('/api/v1/parse', upload.single('file'), parseRouter);
 app.use('/api/v1/parse/batch', upload.array('files', 20));
 
 // 健康检查
-app.get('/api/v1/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+app.get('/api/health', async (_req, res) => {
+  const mem = process.memoryUsage();
+  let dbStatus = 'ok';
+  try {
+    const { db } = await import('./db/index');
+    if (!db) dbStatus = 'unavailable';
+  } catch {
+    dbStatus = 'error';
+  }
+  res.json({
+    status: 'ok',
+    db: dbStatus,
+    memory: {
+      heapUsed: Math.round(mem.heapUsed / 1024 / 1024) + 'MB',
+      heapTotal: Math.round(mem.heapTotal / 1024 / 1024) + 'MB',
+      rss: Math.round(mem.rss / 1024 / 1024) + 'MB',
+    },
+    version: process.env.npm_package_version || '2.0.0',
+    uptime: Math.round(process.uptime()) + 's',
+    timestamp: new Date().toISOString(),
+  });
 });
+
+// /api/v1/health alias
+app.get('/api/v1/health', (_req, res) => res.redirect('/api/health'));
 
 // 启动
 async function start() {
   try {
     await runMigrations();
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
+    const server = app.listen(PORT, () => {
+      serverLogger.info(`Server running on port ${PORT}`);
     });
+
+    const shutdown = (signal: string) => {
+      serverLogger.info(`${signal} received, shutting down gracefully...`);
+      server.close(() => {
+        serverLogger.info('Server closed');
+        process.exit(0);
+      });
+      setTimeout(() => {
+        serverLogger.warn('Forced shutdown after timeout');
+        process.exit(1);
+      }, 10000);
+    };
+
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.on('SIGINT', () => shutdown('SIGINT'));
   } catch (error) {
-    console.error('Failed to start server:', error);
+    serverLogger.error('Failed to start server:', error);
     process.exit(1);
   }
 }
