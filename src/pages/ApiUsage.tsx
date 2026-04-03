@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useApiStore } from '@lib/store/apiStore';
+import { buildUsageCSV, downloadCSV } from '@lib/export/usageReport';
 import MetricCard from '@components/ui/MetricCard';
 import TrendChart from '@components/TrendChart';
 import Icon from '@components/ui/Icon';
@@ -18,18 +19,11 @@ export default function ApiUsage() {
 
   const handleExportCSV = () => {
     if (!usage) return;
-    const rows = [
-      ['端点', '请求数', '平均延迟(ms)'],
-      ...(usage.requestsByEndpoint || []).map(e => [e.endpoint, String(e.count), String(e.avgLatency)]),
-    ];
-    const csv = rows.map(r => r.join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `api-usage-${days}d.csv`;
-    a.click();
+    const csv = buildUsageCSV(usage, days);
+    downloadCSV(csv, `api-usage-${days}d.csv`);
   };
+
+  const handleExportPDF = () => window.print();
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
@@ -57,6 +51,10 @@ export default function ApiUsage() {
           <button onClick={handleExportCSV} className="btn-secondary flex items-center gap-2" disabled={!usage}>
             <Icon name="download" size={16} />
             CSV
+          </button>
+          <button onClick={handleExportPDF} className="btn-secondary flex items-center gap-2">
+            <Icon name="printer" size={16} />
+            PDF
           </button>
         </div>
       </div>
