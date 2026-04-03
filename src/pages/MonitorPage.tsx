@@ -11,15 +11,95 @@ const TIME_RANGES = [
   { label: '7天', value: '7d' },
 ] as const;
 
+interface AlertRule {
+  id: string;
+  type: 'errorRate' | 'p95Latency' | 'dailyCost';
+  threshold: number;
+  enabled: boolean;
+  label: string;
+  unit: string;
+}
+
+const DEFAULT_RULES: AlertRule[] = [
+  { id: 'errorRate', type: 'errorRate', threshold: 10, enabled: false, label: '错误率', unit: '%' },
+  { id: 'p95Latency', type: 'p95Latency', threshold: 3000, enabled: false, label: 'P95 延迟', unit: 'ms' },
+  { id: 'dailyCost', type: 'dailyCost', threshold: 10, enabled: false, label: '日成本', unit: '¥' },
+];
+
+const STORAGE_KEY = 'easyconvert-alert-rules';
+
+function Toast({ message, onClose }: { message: string; onClose: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(onClose, 4000);
+    return () => clearTimeout(t);
+  }, [onClose]);
+  return (
+    <div className="fixed bottom-4 right-4 z-50 bg-status-error text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 max-w-sm">
+      <Icon name="alert-triangle" size={16} />
+      <span className="text-sm">{message}</span>
+      <button onClick={onClose} className="ml-auto opacity-70 hover:opacity-100">
+        <Icon name="x" size={14} />
+      </button>
+    </div>
+  );
+}
+
 export default function MonitorPage() {
   const { metrics, cacheStats, performance, cost, history, sync } = useMonitoringStore();
   const [timeRange, setTimeRange] = useState<string>('24h');
+
+  const [rules, setRules] = useState<AlertRule[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved) : DEFAULT_RULES;
+    } catch { return DEFAULT_RULES; }
+  });
+
+  const [toasts, setToasts] = useState<{ id: string; message: string }[]>([]);
+  const [firedAlerts, setFiredAlerts] = useState<Set<string>>(new Set());
+
+  const updateRule = (id: string, updates: Partial<AlertRule>) => {
+    setRules(prev => {
+      const next = prev.map(r => r.id === id ? { ...r, ...updates } : r);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
 
   useEffect(() => {
     sync();
     const interval = setInterval(sync, 5000);
     return () => clearInterval(interval);
   }, [sync]);
+
+  useEffect(() => {
+    if (!rules.some(r => r.enabled)) return;
+
+    const errorRate = metrics.totalProcessed > 0
+      ? ((metrics.totalProcessed - (metrics.totalProcessed * metrics.successRate / 100)) / metrics.totalProcessed) * 100
+      : 0;
+
+    const checks: Record<string, number> = {
+      errorRate,
+      p95Latency: performance.p95,
+      dailyCost: cost.estimatedCost,
+    };
+
+    for (const rule of rules) {
+      if (!rule.enabled) continue;
+      const value = checks[rule.type];
+      if (value !== undefined && value > rule.threshold) {
+        const alertKey = `${rule.id}-${Math.floor(Date.now() / 60000)}`;
+        if (!firedAlerts.has(alertKey)) {
+          setFiredAlerts(prev => new Set([...prev, alertKey]));
+          setToasts(prev => [...prev, {
+            id: alertKey,
+            message: `⚠️ ${rule.label} 超阈值：当前 ${value.toFixed(1)}${rule.unit}，阈值 ${rule.threshold}${rule.unit}`,
+          }]);
+        }
+      }
+    }
+  }, [metrics, performance, cost]);
 
   const cacheHitData = {
     '命中': cacheStats.hits,
@@ -226,6 +306,45 @@ export default function MonitorPage() {
           </div>
         </div>
       </div>
+
+      {/* Alert Rules */}
+      <div className="card p-5">
+        <h3 className="section-title flex items-center gap-2 mb-4">
+          <Icon name="bell" size={16} className="text-text-tertiary" />
+          告警规则
+        </h3>
+        <div className="space-y-3">
+          {rules.map(rule => (
+            <div key={rule.id} className="flex items-center gap-4 p-3 bg-surface-secondary rounded-lg">
+              <input
+                type="checkbox"
+                checked={rule.enabled}
+                onChange={e => updateRule(rule.id, { enabled: e.target.checked })}
+                className="w-4 h-4"
+              />
+              <span className="text-sm font-medium text-text-primary w-24">{rule.label}</span>
+              <span className="text-xs text-text-secondary">超过</span>
+              <input
+                type="number"
+                value={rule.threshold}
+                onChange={e => updateRule(rule.id, { threshold: Number(e.target.value) })}
+                className="w-20 px-2 py-1 border border-border rounded text-sm font-mono"
+                min={0}
+              />
+              <span className="text-xs text-text-secondary">{rule.unit} 时告警</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Toast notifications */}
+      {toasts.map(toast => (
+        <Toast
+          key={toast.id}
+          message={toast.message}
+          onClose={() => setToasts(prev => prev.filter(t => t.id !== toast.id))}
+        />
+      ))}
     </div>
   );
 }

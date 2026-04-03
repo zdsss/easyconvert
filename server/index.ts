@@ -67,6 +67,22 @@ app.use('/api/v1/usage', usageRouter);
 app.use('/api/v1/parse', upload.single('file'), parseRouter);
 app.use('/api/v1/parse/batch', upload.array('files', 20));
 
+// Alert webhook — forward alert to external URL
+app.post('/api/alerts/webhook', express.json(), async (req, res) => {
+  const { webhookUrl, message, rule } = req.body;
+  if (!webhookUrl) return res.status(400).json({ error: 'webhookUrl required' });
+  try {
+    await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, rule, timestamp: new Date().toISOString() }),
+    });
+    res.json({ success: true });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // 健康检查
 app.get('/api/health', async (_req, res) => {
   const mem = process.memoryUsage();
