@@ -3,7 +3,36 @@ import pool from '../db';
 
 const router = Router();
 
-// 上传标注数据
+/**
+ * @openapi
+ * /evaluations/{taskId}/annotations:
+ *   post:
+ *     summary: 上传单条标注数据
+ *     tags: [Annotations]
+ *     parameters:
+ *       - in: path
+ *         name: taskId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [resultId, annotation]
+ *             properties:
+ *               resultId:
+ *                 type: string
+ *               annotation:
+ *                 type: object
+ *     responses:
+ *       200:
+ *         description: 标注保存成功
+ *       500:
+ *         description: 服务器错误
+ */
 router.post('/:taskId/annotations', async (req, res) => {
   try {
     const { resultId, annotation } = req.body;
@@ -17,7 +46,41 @@ router.post('/:taskId/annotations', async (req, res) => {
   }
 });
 
-// 批量上传标注
+/**
+ * @openapi
+ * /evaluations/{taskId}/annotations/batch:
+ *   post:
+ *     summary: 批量上传标注数据
+ *     tags: [Annotations]
+ *     parameters:
+ *       - in: path
+ *         name: taskId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [annotations]
+ *             properties:
+ *               annotations:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     resultId:
+ *                       type: string
+ *                     annotation:
+ *                       type: object
+ *     responses:
+ *       200:
+ *         description: 批量标注保存成功
+ *       500:
+ *         description: 服务器错误
+ */
 router.post('/:taskId/annotations/batch', async (req, res) => {
   try {
     const { annotations } = req.body;

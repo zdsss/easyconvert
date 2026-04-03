@@ -3,7 +3,34 @@ import pool from '../db';
 
 const router = Router();
 
-// 创建评测任务
+/**
+ * @openapi
+ * /evaluations:
+ *   post:
+ *     summary: 创建评测任务
+ *     tags: [Evaluations]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, type]
+ *             properties:
+ *               name:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               type:
+ *                 type: string
+ *               config:
+ *                 type: object
+ *     responses:
+ *       200:
+ *         description: 创建成功
+ *       500:
+ *         description: 服务器错误
+ */
 router.post('/', async (req, res) => {
   try {
     const { name, description, type, config } = req.body;
@@ -21,7 +48,31 @@ router.post('/', async (req, res) => {
   }
 });
 
-// 获取评测列表
+/**
+ * @openapi
+ * /evaluations:
+ *   get:
+ *     summary: 获取评测任务列表
+ *     tags: [Evaluations]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: 任务列表
+ *       500:
+ *         description: 服务器错误
+ */
 router.get('/', async (req, res) => {
   try {
     const { page = 1, limit = 20, status } = req.query;
@@ -47,7 +98,26 @@ router.get('/', async (req, res) => {
   }
 });
 
-// 获取评测详情
+/**
+ * @openapi
+ * /evaluations/{id}:
+ *   get:
+ *     summary: 获取评测任务详情
+ *     tags: [Evaluations]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: 任务详情
+ *       404:
+ *         description: 任务不存在
+ *       500:
+ *         description: 服务器错误
+ */
 router.get('/:id', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM evaluation_tasks WHERE id = $1', [req.params.id]);
@@ -62,7 +132,35 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// 更新评测任务
+/**
+ * @openapi
+ * /evaluations/{id}:
+ *   put:
+ *     summary: 更新评测任务状态
+ *     tags: [Evaluations]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               status:
+ *                 type: string
+ *               stats:
+ *                 type: object
+ *     responses:
+ *       200:
+ *         description: 更新成功
+ *       500:
+ *         description: 服务器错误
+ */
 router.put('/:id', async (req, res) => {
   try {
     const { status, stats } = req.body;
@@ -78,7 +176,24 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// 获取评测结果
+/**
+ * @openapi
+ * /evaluations/{id}/results:
+ *   get:
+ *     summary: 获取评测结果列表
+ *     tags: [Evaluations]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: 结果列表
+ *       500:
+ *         description: 服务器错误
+ */
 router.get('/:id/results', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM evaluation_results WHERE task_id = $1', [req.params.id]);

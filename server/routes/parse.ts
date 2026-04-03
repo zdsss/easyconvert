@@ -13,13 +13,16 @@ const router = Router();
  * /parse:
  *   post:
  *     summary: 同步解析简历
+ *     tags: [Parse]
  *     security:
  *       - ApiKeyAuth: []
  *     requestBody:
+ *       required: true
  *       content:
  *         multipart/form-data:
  *           schema:
  *             type: object
+ *             required: [file]
  *             properties:
  *               file:
  *                 type: string
@@ -28,7 +31,13 @@ const router = Router();
  *       200:
  *         description: 解析成功
  *       400:
- *         description: 缺少文件
+ *         description: 缺少文件或参数错误
+ *       401:
+ *         description: 未授权
+ *       429:
+ *         description: 请求频率超限
+ *       500:
+ *         description: 服务器错误
  */
 router.post('/', async (req: AuthenticatedRequest, res) => {
   try {
@@ -63,7 +72,35 @@ router.post('/', async (req: AuthenticatedRequest, res) => {
 });
 
 /**
- * POST /api/v1/parse/async — 异步解析，返回 jobId
+ * @openapi
+ * /parse/async:
+ *   post:
+ *     summary: 异步解析简历，返回 jobId
+ *     tags: [Parse]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required: [file]
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       202:
+ *         description: 任务已入队
+ *       400:
+ *         description: 缺少文件
+ *       401:
+ *         description: 未授权
+ *       429:
+ *         description: 请求频率超限
+ *       500:
+ *         description: 服务器错误
  */
 router.post('/async', async (req: AuthenticatedRequest, res) => {
   try {
@@ -122,7 +159,26 @@ router.post('/async', async (req: AuthenticatedRequest, res) => {
 });
 
 /**
- * GET /api/v1/parse/:jobId — 查询异步任务状态
+ * @openapi
+ * /parse/{jobId}:
+ *   get:
+ *     summary: 查询异步任务状态
+ *     tags: [Parse]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: 任务状态
+ *       404:
+ *         description: 任务不存在
+ *       500:
+ *         description: 服务器错误
  */
 router.get('/:jobId', async (req: AuthenticatedRequest, res) => {
   try {
@@ -156,7 +212,37 @@ router.get('/:jobId', async (req: AuthenticatedRequest, res) => {
 });
 
 /**
- * POST /api/v1/parse/batch — 批量解析（最多 20 文件）
+ * @openapi
+ * /parse/batch:
+ *   post:
+ *     summary: 批量异步解析（最多 20 文件）
+ *     tags: [Parse]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required: [files]
+ *             properties:
+ *               files:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *     responses:
+ *       202:
+ *         description: 批量任务已入队
+ *       400:
+ *         description: 缺少文件或超过 20 个限制
+ *       401:
+ *         description: 未授权
+ *       429:
+ *         description: 请求频率超限
+ *       500:
+ *         description: 服务器错误
  */
 router.post('/batch', async (req: AuthenticatedRequest, res) => {
   try {
