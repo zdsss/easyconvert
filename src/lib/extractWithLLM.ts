@@ -1,6 +1,7 @@
 import { Resume, TimeoutError } from '@lib/types';
 import { ParsingStrategy } from '@lib/parsingStrategy';
 import { getPrompt } from '@lib/prompts';
+import { detectLanguage } from './detectLanguage';
 import { deduplicateRequest } from '@lib/llmCache';
 import { logger } from '@lib/logger';
 import { costTracker } from '@lib/monitoring/cost';
@@ -144,7 +145,9 @@ async function extractWithTimeout(text: string, strategy: ParsingStrategy, pdfBa
   const timeoutId = setTimeout(() => controller.abort(), strategy.timeout);
 
   try {
-    const prompt = getPrompt(strategy.promptType, strategy.scenario);
+    const detectedLang = pdfBase64 ? 'zh' : detectLanguage(text);
+    const lang = detectedLang === 'unknown' ? 'zh' : detectedLang;
+    const prompt = getPrompt(strategy.promptType, strategy.scenario, undefined, lang);
     const userContent = (provider === 'claude' && pdfBase64)
       ? [
           { type: 'document' as const, source: { type: 'base64' as const, media_type: 'application/pdf' as const, data: pdfBase64 } },
@@ -201,6 +204,7 @@ async function extractWithTimeout(text: string, strategy: ParsingStrategy, pdfBa
     if (Object.keys(confidenceMap).length > 0) {
       parsed.additional = { ...parsed.additional, _confidence: confidenceMap };
     }
+    parsed.additional = { ...parsed.additional, language: lang };
 
     return parsed;
   } catch (error: any) {
