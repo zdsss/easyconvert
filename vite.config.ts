@@ -12,6 +12,18 @@ export default defineConfig({
       '@pages': path.resolve(__dirname, 'src/pages')
     }
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-charts': ['recharts'],
+          'vendor-pdf': ['pdfjs-dist'],
+          'vendor-docx': ['mammoth'],
+        }
+      }
+    }
+  },
   server: {
     port: 5173,
     proxy: {
@@ -21,6 +33,12 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    environment: 'jsdom'
+    environment: 'jsdom',
+    include: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'server/__tests__/**/*.test.ts'],
+    alias: {
+      '@lib': path.resolve(__dirname, 'src/lib'),
+      '@components': path.resolve(__dirname, 'src/components'),
+      '@pages': path.resolve(__dirname, 'src/pages'),
+    }
   }
 })

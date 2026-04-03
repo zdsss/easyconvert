@@ -1,80 +1,16 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useEvaluationStore, type EvaluationTask } from '@lib/store/evaluationStore';
 import { evaluationApi } from '@lib/api/evaluationApi';
 import { logger } from '@lib/logger';
 import { processWithEvaluation } from '@lib/evaluationProcessor';
 import { generateReport, exportToCSV } from '@lib/reportGenerator';
-import AnnotationEditor from '@components/AnnotationEditor';
+import EvaluationResultDrawer from '@components/EvaluationResultDrawer';
+import ComparisonView from '@components/ComparisonView';
+import MetricCard from '@components/ui/MetricCard';
+import Pagination from '@components/ui/Pagination';
+import Icon from '@components/ui/Icon';
 import type { TaskResponse, EvaluationResult, Resume } from '@lib/types';
-
-function ResultDetail({ result }: { result: EvaluationResult }) {
-  const r = result.parsedResume;
-  if (!r) return <div className="p-3 text-red-500 text-sm">解析失败：{result.error}</div>;
-
-  return (
-    <div className="p-4 bg-gray-50 border-t text-sm space-y-3">
-      {/* 基本信息 */}
-      <div>
-        <div className="font-semibold text-gray-700 mb-1">基本信息</div>
-        <div className="grid grid-cols-3 gap-2 text-gray-600">
-          <span>姓名：{r.basics?.name || '-'}</span>
-          <span>电话：{r.basics?.phone || '-'}</span>
-          <span>邮箱：{r.basics?.email || '-'}</span>
-          {r.basics?.title && <span>职位：{r.basics.title}</span>}
-          {r.basics?.location && <span>地点：{r.basics.location}</span>}
-        </div>
-      </div>
-
-      {/* 工作经历 */}
-      {r.work?.length > 0 && (
-        <div>
-          <div className="font-semibold text-gray-700 mb-1">工作经历（{r.work.length} 段）</div>
-          <div className="space-y-1">
-            {r.work.map((w: any, i: number) => (
-              <div key={i} className="text-gray-600">
-                {w.company} · {w.position} · {w.startDate} ~ {w.endDate || '至今'}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* 教育背景 */}
-      {r.education?.length > 0 && (
-        <div>
-          <div className="font-semibold text-gray-700 mb-1">教育背景（{r.education.length} 段）</div>
-          <div className="space-y-1">
-            {r.education.map((e: any, i: number) => (
-              <div key={i} className="text-gray-600">
-                {e.institution || e.school} · {e.degree} · {e.major || '-'}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* 技能 */}
-      {(r.skills?.length ?? 0) > 0 && (
-        <div>
-          <div className="font-semibold text-gray-700 mb-1">技能（{r.skills!.length} 项）</div>
-          <div className="flex flex-wrap gap-1">
-            {r.skills!.map((s: string, i: number) => (
-              <span key={i} className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">{s}</span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* 元信息 */}
-      <div className="pt-2 border-t text-xs text-gray-400 flex gap-4">
-        <span>分类：{result.classification?.difficulty} / {result.classification?.completeness} / {result.classification?.scenario}</span>
-        <span>缓存：{result.fromCache ? '命中' : '未命中'}</span>
-        <span>耗时：{result.processingTime}ms</span>
-      </div>
-    </div>
-  );
-}
 
 function adaptTaskResponse(task: TaskResponse): EvaluationTask {
   return {
@@ -87,14 +23,36 @@ function adaptTaskResponse(task: TaskResponse): EvaluationTask {
   };
 }
 
+const STATUS_MAP: Record<string, { label: string; class: string }> = {
+  completed: { label: '已完成', class: 'badge-success' },
+  processing: { label: '处理中', class: 'badge-info' },
+  failed: { label: '失败', class: 'badge-error' },
+  pending: { label: '待评测', class: 'badge-neutral' },
+};
+
+const TABS = [
+  { key: 'results', label: '结果列表', icon: 'list' },
+  { key: 'upload', label: '文件上传', icon: 'upload' },
+  { key: 'config', label: '配置信息', icon: 'settings' },
+] as const;
+
+type TabKey = typeof TABS[number]['key'];
+const PAGE_SIZE = 10;
+
 export default function EvaluationDetail() {
   const { id } = useParams<{ id: string }>();
   const { currentTask, results, setCurrentTask, setResults, isLoading, setLoading } = useEvaluationStore();
   const [files, setFiles] = useState<FileList | null>(null);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [running, setRunning] = useState(false);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [editingResult, setEditingResult] = useState<EvaluationResult | null>(null);
+  const [selectedResult, setSelectedResult] = useState<EvaluationResult | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [activeTab, setActiveTab] = useState<TabKey>('results');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [sortField, setSortField] = useState<'fileName' | 'accuracy' | 'processingTime'>('fileName');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+  const [showComparison, setShowComparison] = useState(false);
 
   useEffect(() => {
     if (id) loadTaskAndResults(id);
@@ -111,16 +69,11 @@ export default function EvaluationDetail() {
       setResults(taskResults as any);
     } catch (error) {
       logger.error('Failed to load data', error as Error);
-      // 后端不可用时创建本地任务占位
       setCurrentTask({
-        id: id!,
-        name: '评测任务',
-        type: 'batch',
-        status: 'pending',
+        id: id!, name: '评测任务', type: 'batch', status: 'pending',
         config: { enableFieldLevel: true, enableClassification: true, enableProcessTrace: false, accuracyMethod: 'partial' },
         stats: { totalFiles: 0, processedFiles: 0, successCount: 0, failureCount: 0 },
-        createdAt: new Date(),
-        updatedAt: new Date()
+        createdAt: new Date(), updatedAt: new Date()
       });
     } finally {
       setLoading(false);
@@ -131,27 +84,20 @@ export default function EvaluationDetail() {
     if (!files || !currentTask) return;
     setRunning(true);
     setResults([]);
+    setActiveTab('results');
     const fileArray = Array.from(files);
     setProgress({ current: 0, total: fileArray.length });
 
     try {
-      // Load ground truth annotations if available
       const annotations = await loadGroundTruth();
-
-      await processWithEvaluation(
-        fileArray,
-        {
-          taskId: currentTask.id,
-          enableFieldLevel: currentTask.config.enableFieldLevel,
-          enableClassification: currentTask.config.enableClassification,
-          enableProcessTrace: currentTask.config.enableProcessTrace,
-          accuracyMethod: currentTask.config.accuracyMethod,
-          annotations
-        },
-        (current, total) => setProgress({ current, total })
-      );
-
-      // Reload results from backend
+      await processWithEvaluation(fileArray, {
+        taskId: currentTask.id,
+        enableFieldLevel: currentTask.config.enableFieldLevel,
+        enableClassification: currentTask.config.enableClassification,
+        enableProcessTrace: currentTask.config.enableProcessTrace,
+        accuracyMethod: currentTask.config.accuracyMethod,
+        annotations
+      }, (current, total) => setProgress({ current, total }));
       const updatedResults = await evaluationApi.getResults(currentTask.id);
       setResults(updatedResults as any);
       setCurrentTask({ ...currentTask, status: 'completed' });
@@ -168,18 +114,16 @@ export default function EvaluationDetail() {
       if (!response.ok) return undefined;
       const data = await response.json();
       return new Map(Object.entries(data));
-    } catch {
-      return undefined;
-    }
+    } catch { return undefined; }
   }
 
   const handleSaveAnnotation = async (annotation: any) => {
-    if (!editingResult || !currentTask) return;
+    if (!selectedResult || !currentTask) return;
     try {
-      await evaluationApi.saveAnnotation(currentTask.id, editingResult.id, annotation);
+      await evaluationApi.saveAnnotation(currentTask.id, selectedResult.id, annotation);
       const updatedResults = await evaluationApi.getResults(currentTask.id);
       setResults(updatedResults as any);
-      setEditingResult(null);
+      setSelectedResult(null);
     } catch (error) {
       logger.error('Failed to save annotation', error as Error);
     }
@@ -188,172 +132,349 @@ export default function EvaluationDetail() {
   const handleExportReport = (format: 'json' | 'csv') => {
     if (!currentTask || results.length === 0) return;
     const report = generateReport(currentTask, results);
-
-    if (format === 'json') {
-      const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `report-${currentTask.id}.json`;
-      a.click();
-    } else {
-      const csv = exportToCSV(report);
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `report-${currentTask.id}.csv`;
-      a.click();
-    }
+    const content = format === 'json' ? JSON.stringify(report, null, 2) : exportToCSV(report);
+    const blob = new Blob([content], { type: format === 'json' ? 'application/json' : 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `report-${currentTask.id}.${format}`;
+    a.click();
   };
 
-  if (isLoading) return <div className="p-6">加载中...</div>;
-  if (!currentTask) return <div className="p-6">任务不存在</div>;
+  if (isLoading) return (
+    <div className="p-6 flex items-center gap-2 text-text-secondary">
+      <div className="w-4 h-4 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" />
+      加载中...
+    </div>
+  );
+  if (!currentTask) return <div className="p-6 text-text-secondary">任务不存在</div>;
+
+  // Filter & sort results
+  let filteredResults = statusFilter === 'all' ? results
+    : statusFilter === 'success' ? results.filter(r => !r.error)
+    : statusFilter === 'failed' ? results.filter(r => r.error)
+    : results.filter(r => r.fromCache);
+
+  filteredResults = [...filteredResults].sort((a, b) => {
+    let cmp = 0;
+    if (sortField === 'fileName') cmp = a.fileName.localeCompare(b.fileName);
+    else if (sortField === 'accuracy') cmp = (a.metrics?.accuracy || 0) - (b.metrics?.accuracy || 0);
+    else cmp = a.processingTime - b.processingTime;
+    return sortDir === 'asc' ? cmp : -cmp;
+  });
+
+  const totalItems = filteredResults.length;
+  const paginatedResults = filteredResults.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const overallMetrics = results.length > 0 ? {
     accuracy: results.reduce((sum, r) => sum + r.metrics.accuracy, 0) / results.length,
     completeness: results.reduce((sum, r) => sum + r.metrics.completeness, 0) / results.length,
     structureScore: results.reduce((sum, r) => sum + r.metrics.structureScore, 0) / results.length,
+    avgTime: results.reduce((sum, r) => sum + r.processingTime, 0) / results.length,
+    cacheRate: (results.filter(r => r.fromCache).length / results.length) * 100,
   } : null;
 
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-2">{currentTask.name}</h1>
-      <span className={`text-sm px-2 py-1 rounded ${currentTask.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
-        {currentTask.status === 'completed' ? '已完成' : '待评测'}
-      </span>
+  const statusInfo = STATUS_MAP[currentTask.status] || STATUS_MAP.pending;
 
-      {/* 上传区 */}
-      <div className="mt-6 mb-6 p-4 border rounded bg-blue-50">
-        <h3 className="font-semibold mb-3">上传简历文件</h3>
-        <input
-          type="file"
-          multiple
-          accept=".pdf,.doc,.docx"
-          onChange={(e) => setFiles(e.target.files)}
-          className="mb-3 block"
-          disabled={running}
-        />
-        {files && <p className="text-sm text-gray-500 mb-3">已选择 {files.length} 个文件</p>}
-        <button
-          onClick={handleStartEvaluation}
-          disabled={!files || running}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-300"
-        >
-          {running ? `处理中 ${progress.current}/${progress.total}...` : '开始评测'}
-        </button>
-        {results.length > 0 && (
-          <div className="mt-3 flex gap-2">
-            <button onClick={() => handleExportReport('json')}
-              className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded hover:bg-green-200">
-              导出JSON
-            </button>
-            <button onClick={() => handleExportReport('csv')}
-              className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded hover:bg-green-200">
-              导出CSV
-            </button>
+  const toggleSort = (field: typeof sortField) => {
+    if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortField(field); setSortDir('asc'); }
+  };
+
+  const SortIcon = ({ field }: { field: typeof sortField }) => (
+    sortField === field ? <Icon name={sortDir === 'asc' ? 'chevron-up' : 'chevron-down'} size={12} /> : null
+  );
+
+  return (
+    <div className="p-6 max-w-6xl mx-auto">
+      {/* Task header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <Link to="/evaluation" className="btn-ghost p-1.5">
+            <Icon name="arrow-left" size={18} />
+          </Link>
+          <div>
+            <div className="flex items-center gap-2.5">
+              <h1 className="page-title">{currentTask.name}</h1>
+              <span className={statusInfo.class}>{statusInfo.label}</span>
+            </div>
+            {currentTask.description && (
+              <p className="text-sm text-text-secondary mt-0.5">{currentTask.description}</p>
+            )}
           </div>
-        )}
+        </div>
+        <div className="flex items-center gap-2">
+          {results.length > 0 && (
+            <>
+              <button onClick={() => handleExportReport('json')} className="btn-ghost text-xs flex items-center gap-1.5">
+                <Icon name="download" size={14} /> JSON
+              </button>
+              <button onClick={() => handleExportReport('csv')} className="btn-ghost text-xs flex items-center gap-1.5">
+                <Icon name="download" size={14} /> CSV
+              </button>
+              <Link to={`/evaluation/${id}/report`} className="btn-secondary flex items-center gap-2">
+                <Icon name="bar-chart" size={16} /> 报告
+              </Link>
+            </>
+          )}
+        </div>
       </div>
 
-      {/* 进度条 */}
-      {running && (
-        <div className="mb-6">
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div
-              className="bg-blue-600 h-2 rounded-full transition-all"
-              style={{ width: `${progress.total > 0 ? (progress.current / progress.total) * 100 : 0}%` }}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* 汇总指标 */}
+      {/* Metric cards */}
       {overallMetrics && (
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="p-4 border rounded text-center">
-            <div className="text-sm text-gray-500">平均准确率</div>
-            <div className="text-2xl font-bold text-blue-600">{overallMetrics.accuracy.toFixed(1)}%</div>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+          <MetricCard title="平均准确率" value={`${overallMetrics.accuracy.toFixed(1)}%`} icon="check-circle" color="text-brand-600" />
+          <MetricCard title="平均完整度" value={`${overallMetrics.completeness.toFixed(1)}%`} icon="layers" color="text-status-success" />
+          <MetricCard title="结构分" value={`${overallMetrics.structureScore.toFixed(1)}%`} icon="grid" color="text-purple-600" />
+          <MetricCard title="平均耗时" value={`${(overallMetrics.avgTime / 1000).toFixed(2)}s`} icon="clock" color="text-status-warning" />
+          <MetricCard title="缓存率" value={`${overallMetrics.cacheRate.toFixed(0)}%`} icon="zap" color="text-status-info" />
+        </div>
+      )}
+
+      {/* Progress bar */}
+      {running && (
+        <div className="card p-4 mb-6">
+          <div className="flex justify-between text-sm text-text-secondary mb-2">
+            <span>处理进度</span>
+            <span>{progress.current}/{progress.total} ({progress.total > 0 ? Math.round((progress.current / progress.total) * 100) : 0}%)</span>
           </div>
-          <div className="p-4 border rounded text-center">
-            <div className="text-sm text-gray-500">平均完整度</div>
-            <div className="text-2xl font-bold text-green-600">{overallMetrics.completeness.toFixed(1)}%</div>
-          </div>
-          <div className="p-4 border rounded text-center">
-            <div className="text-sm text-gray-500">平均结构分</div>
-            <div className="text-2xl font-bold text-purple-600">{overallMetrics.structureScore.toFixed(1)}%</div>
+          <div className="w-full bg-surface-tertiary rounded-full h-2">
+            <div className="bg-brand-600 h-2 rounded-full transition-all duration-300" style={{ width: `${progress.total > 0 ? (progress.current / progress.total) * 100 : 0}%` }} />
           </div>
         </div>
       )}
 
-      {/* 结果列表 */}
-      {results.length > 0 && (
-        <div className="border rounded overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-2 text-left">文件名</th>
-                <th className="px-4 py-2 text-left">准确率</th>
-                <th className="px-4 py-2 text-left">完整度</th>
-                <th className="px-4 py-2 text-left">处理时间</th>
-                <th className="px-4 py-2 text-left">状态</th>
-                <th className="px-4 py-2 text-left">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {results.map(result => (
-                <>
-                  <tr
-                    key={result.id}
-                    className="border-t hover:bg-blue-50 cursor-pointer"
-                    onClick={() => setExpandedId(expandedId === result.id ? null : result.id)}
-                  >
-                    <td className="px-4 py-2 font-medium flex items-center gap-1">
-                      <span className="text-gray-400 text-xs">{expandedId === result.id ? '▼' : '▶'}</span>
-                      {result.fileName}
-                    </td>
-                    <td className="px-4 py-2">{result.error ? '-' : `${result.metrics.accuracy.toFixed(1)}%`}</td>
-                    <td className="px-4 py-2">{result.error ? '-' : `${result.metrics.completeness.toFixed(1)}%`}</td>
-                    <td className="px-4 py-2">{result.processingTime}ms</td>
-                    <td className="px-4 py-2">
-                      {result.error
-                        ? <span className="text-red-500">失败: {result.error}</span>
-                        : result.fromCache
-                          ? <span className="text-gray-500">缓存命中</span>
-                          : <span className="text-green-600">✓ 完成</span>
-                      }
-                    </td>
-                    <td className="px-4 py-2">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setEditingResult(result); }}
-                        className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
-                      >
-                        标注
-                      </button>
-                    </td>
-                  </tr>
-                  {expandedId === result.id && (
-                    <tr key={`${result.id}-detail`} className="bg-gray-50">
-                      <td colSpan={6} className="p-0">
-                        <ResultDetail result={result} />
-                      </td>
-                    </tr>
-                  )}
-                </>
+      {/* Tab bar */}
+      <div className="flex border-b border-border mb-5">
+        {TABS.map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === tab.key
+                ? 'border-brand-600 text-brand-700 dark:text-brand-400'
+                : 'border-transparent text-text-secondary hover:text-text-primary'
+            }`}
+          >
+            <Icon name={tab.icon} size={15} />
+            {tab.label}
+            {tab.key === 'results' && results.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 rounded-full bg-surface-tertiary text-xs">{results.length}</span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab: Results */}
+      {activeTab === 'results' && (
+        <>
+          {results.length > 0 && (
+            <div className="flex gap-1.5 mb-4 flex-wrap items-center">
+              {['all', 'success', 'failed', 'cached'].map(filter => (
+                <button
+                  key={filter}
+                  onClick={() => { setStatusFilter(filter); setCurrentPage(1); }}
+                  className={`px-3 py-1.5 text-sm rounded-lg transition-colors duration-150 ${
+                    statusFilter === filter
+                      ? 'bg-brand-600 text-white shadow-sm'
+                      : 'bg-surface text-text-secondary border border-border hover:bg-surface-tertiary'
+                  }`}
+                >
+                  {filter === 'all' ? `全部 (${results.length})` :
+                   filter === 'success' ? `成功 (${results.filter(r => !r.error).length})` :
+                   filter === 'failed' ? `失败 (${results.filter(r => r.error).length})` :
+                   `缓存 (${results.filter(r => r.fromCache).length})`}
+                </button>
               ))}
-            </tbody>
-          </table>
+              {selectedRows.size === 2 && (
+                <button
+                  onClick={() => setShowComparison(true)}
+                  className="ml-auto btn-secondary flex items-center gap-1.5 text-sm"
+                >
+                  <Icon name="columns" size={15} />
+                  对比选中
+                </button>
+              )}
+              {selectedRows.size > 0 && selectedRows.size !== 2 && (
+                <span className="ml-auto text-xs text-text-tertiary">已选 {selectedRows.size} 行（选 2 行可对比）</span>
+              )}
+            </div>
+          )}
+
+          {paginatedResults.length > 0 ? (
+            <div className="card overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-surface-secondary">
+                    <tr>
+                      <th className="px-4 py-3 w-8" />
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-text-secondary uppercase tracking-wide cursor-pointer select-none" onClick={() => toggleSort('fileName')}>
+                        <span className="flex items-center gap-1">文件名 <SortIcon field="fileName" /></span>
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-text-secondary uppercase tracking-wide cursor-pointer select-none" onClick={() => toggleSort('accuracy')}>
+                        <span className="flex items-center gap-1">准确率 <SortIcon field="accuracy" /></span>
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-text-secondary uppercase tracking-wide">完整度</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-text-secondary uppercase tracking-wide cursor-pointer select-none" onClick={() => toggleSort('processingTime')}>
+                        <span className="flex items-center gap-1">耗时 <SortIcon field="processingTime" /></span>
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-text-secondary uppercase tracking-wide">状态</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedResults.map(result => (
+                      <tr
+                        key={result.id}
+                        className={`border-t border-border-light hover:bg-surface-secondary cursor-pointer transition-colors ${selectedRows.has(result.id) ? 'bg-brand-50 dark:bg-brand-900/10' : ''}`}
+                        onClick={() => setSelectedResult(result)}
+                      >
+                        <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={selectedRows.has(result.id)}
+                            onChange={e => {
+                              const next = new Set(selectedRows);
+                              if (e.target.checked) {
+                                if (next.size < 2) next.add(result.id);
+                              } else {
+                                next.delete(result.id);
+                              }
+                              setSelectedRows(next);
+                            }}
+                            className="rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                          />
+                        </td>
+                        <td className="px-4 py-3 font-medium text-text-primary">{result.fileName}</td>
+                        <td className="px-4 py-3 font-mono">{result.error ? '-' : `${result.metrics.accuracy.toFixed(1)}%`}</td>
+                        <td className="px-4 py-3 font-mono">{result.error ? '-' : `${result.metrics.completeness.toFixed(1)}%`}</td>
+                        <td className="px-4 py-3 text-text-secondary font-mono">{result.processingTime}ms</td>
+                        <td className="px-4 py-3">
+                          {result.error ? <span className="badge-error">失败</span>
+                            : result.fromCache ? <span className="badge-neutral">缓存</span>
+                            : <span className="badge-success">完成</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="px-4 border-t border-border">
+                <Pagination currentPage={currentPage} totalItems={totalItems} pageSize={PAGE_SIZE} onPageChange={setCurrentPage} />
+              </div>
+            </div>
+          ) : results.length === 0 ? (
+            <div className="text-center py-12 text-text-secondary">
+              <Icon name="clipboard" size={40} className="mx-auto mb-3 text-text-tertiary" />
+              <p>暂无结果，请上传文件并开始评测</p>
+            </div>
+          ) : null}
+        </>
+      )}
+
+      {/* Tab: Upload */}
+      {activeTab === 'upload' && (
+        <div className="card p-6">
+          <h3 className="section-title flex items-center gap-2 mb-4">
+            <Icon name="upload" size={16} className="text-text-tertiary" />
+            上传简历文件
+          </h3>
+          <p className="text-sm text-text-secondary mb-3">拖拽文件到此处，或点击选择文件</p>
+          <div className="flex items-center gap-3">
+            <input
+              type="file"
+              multiple
+              accept=".pdf,.doc,.docx"
+              onChange={(e) => setFiles(e.target.files)}
+              className="text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100 dark:file:bg-brand-900/30 dark:file:text-brand-400"
+              disabled={running}
+            />
+            <button
+              onClick={handleStartEvaluation}
+              disabled={!files || running}
+              className="btn-primary flex items-center gap-2"
+            >
+              {running ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  {progress.current}/{progress.total}
+                </>
+              ) : (
+                <>
+                  <Icon name="zap" size={16} />
+                  开始评测
+                </>
+              )}
+            </button>
+          </div>
+          {files && <p className="text-xs text-text-tertiary mt-2">已选择 {files.length} 个文件</p>}
         </div>
       )}
 
-      {/* Annotation Editor Modal */}
-      {editingResult && (
-        <AnnotationEditor
-          result={editingResult}
-          onSave={handleSaveAnnotation}
-          onCancel={() => setEditingResult(null)}
-        />
+      {/* Tab: Config */}
+      {activeTab === 'config' && (
+        <div className="card p-6 space-y-4">
+          <h3 className="section-title">配置信息</h3>
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="p-3 bg-surface-secondary rounded-lg">
+              <p className="text-xs text-text-tertiary mb-1">任务类型</p>
+              <p className="text-text-primary font-medium">{currentTask.type === 'batch' ? '批量' : '单文件'}</p>
+            </div>
+            <div className="p-3 bg-surface-secondary rounded-lg">
+              <p className="text-xs text-text-tertiary mb-1">准确率方法</p>
+              <p className="text-text-primary font-medium">{currentTask.config.accuracyMethod}</p>
+            </div>
+            <div className="p-3 bg-surface-secondary rounded-lg">
+              <p className="text-xs text-text-tertiary mb-1">字段级准确率</p>
+              <p className="text-text-primary font-medium">{currentTask.config.enableFieldLevel ? '启用' : '禁用'}</p>
+            </div>
+            <div className="p-3 bg-surface-secondary rounded-lg">
+              <p className="text-xs text-text-tertiary mb-1">分类</p>
+              <p className="text-text-primary font-medium">{currentTask.config.enableClassification ? '启用' : '禁用'}</p>
+            </div>
+            <div className="p-3 bg-surface-secondary rounded-lg">
+              <p className="text-xs text-text-tertiary mb-1">处理追踪</p>
+              <p className="text-text-primary font-medium">{currentTask.config.enableProcessTrace ? '启用' : '禁用'}</p>
+            </div>
+            <div className="p-3 bg-surface-secondary rounded-lg">
+              <p className="text-xs text-text-tertiary mb-1">创建时间</p>
+              <p className="text-text-primary font-medium">{currentTask.createdAt.toLocaleString()}</p>
+            </div>
+          </div>
+        </div>
       )}
+
+      {/* Comparison modal */}
+      {showComparison && (() => {
+        const [idA, idB] = Array.from(selectedRows);
+        const resultA = results.find(r => r.id === idA);
+        const resultB = results.find(r => r.id === idB);
+        if (!resultA || !resultB) return null;
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowComparison(false)} />
+            <div className="relative bg-surface rounded-xl border border-border shadow-lg w-full max-w-3xl max-h-[85vh] overflow-y-auto animate-scale-in p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="section-title">结果对比</h3>
+                <button onClick={() => setShowComparison(false)} className="btn-ghost p-1.5">
+                  <Icon name="x" size={18} />
+                </button>
+              </div>
+              <div className="flex gap-4 mb-4 text-sm">
+                <div className="flex-1 p-2 bg-brand-50 dark:bg-brand-900/20 rounded-lg text-brand-700 dark:text-brand-400 font-medium truncate">{resultA.fileName}</div>
+                <div className="flex-1 p-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg text-emerald-700 dark:text-emerald-400 font-medium truncate">{resultB.fileName}</div>
+              </div>
+              <ComparisonView parsed={resultA.parsedResume} annotation={resultB.parsedResume} />
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Result Drawer */}
+      <EvaluationResultDrawer
+        result={selectedResult}
+        onClose={() => setSelectedResult(null)}
+        onSaveAnnotation={handleSaveAnnotation}
+      />
     </div>
   );
 }

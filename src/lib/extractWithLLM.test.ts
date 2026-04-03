@@ -47,5 +47,52 @@ describe('extractResume', () => {
     await extractResume('test resume text');
     expect(recordSpy).toHaveBeenCalledWith(100, 50);
   });
-});
 
+  it('throws on non-ok HTTP status', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      statusText: 'Unauthorized',
+    });
+
+    await expect(extractResume('test')).rejects.toThrow('API error: 401');
+  });
+
+  it('throws on JSON parse failure in response content', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        choices: [{ message: { content: 'not valid json {{{' } }],
+        usage: { prompt_tokens: 10, completion_tokens: 5 }
+      })
+    });
+
+    await expect(extractResume('test')).rejects.toThrow();
+  });
+
+  it('retries on network error and succeeds on second attempt', async () => {
+    const validResponse = {
+      ok: true,
+      json: async () => ({
+        choices: [{ message: { content: JSON.stringify({ basics: { name: 'Retry', email: 'r@r.com', phone: '999' }, work: [], education: [] }) } }],
+        usage: { prompt_tokens: 50, completion_tokens: 25 }
+      })
+    };
+
+    global.fetch = vi.fn()
+      .mockRejectedValueOnce(Object.assign(new Error('network error'), { name: 'NetworkError' }))
+      .mockResolvedValueOnce(validResponse);
+
+    const result = await extractResume('test', { timeout: 5000, temperature: 0.05, maxRetries: 2, promptType: 'standard', validationLevel: 'standard' });
+    expect(result.basics.name).toBe('Retry');
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('throws after exhausting all retries', async () => {
+    global.fetch = vi.fn().mockRejectedValue(Object.assign(new Error('network error'), { name: 'NetworkError' }));
+
+    await expect(
+      extractResume('test', { timeout: 5000, temperature: 0.05, maxRetries: 1, promptType: 'standard', validationLevel: 'standard' })
+    ).rejects.toThrow();
+  });
+});
