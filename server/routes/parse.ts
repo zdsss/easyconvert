@@ -308,4 +308,76 @@ router.post('/batch', async (req: AuthenticatedRequest, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /parse/prefetch:
+ *   post:
+ *     summary: 缓存预热，检查并排队未缓存的 hash
+ *     tags: [Parse]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [hashes]
+ *             properties:
+ *               hashes:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       200:
+ *         description: 预热结果
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 queued:
+ *                   type: number
+ *                 alreadyCached:
+ *                   type: number
+ *       400:
+ *         description: hashes 参数无效
+ */
+router.post('/prefetch', async (req, res) => {
+  try {
+    const { hashes } = req.body;
+
+    if (!Array.isArray(hashes) || hashes.length === 0) {
+      return res.status(400).json({ error: 'hashes must be a non-empty array' });
+    }
+
+    // Query parse_cache for already-cached hashes
+    const placeholders = hashes.map((_: string, i: number) => `$${i + 1}`).join(', ');
+    const cacheResult = await db.query(
+      `SELECT file_hash FROM parse_cache WHERE file_hash IN (${placeholders})`,
+      hashes
+    );
+
+    const cachedSet = new Set(cacheResult.rows.map((r: any) => r.file_hash));
+    const uncached = hashes.filter((h: string) => !cachedSet.has(h));
+
+    // Enqueue uncached hashes for background processing
+    for (const hash of uncached) {
+      jobQueue.enqueue({
+        id: `prefetch-${hash}`,
+        status: 'pending',
+        execute: async () => {
+          serverLogger.info('Prefetch job placeholder', { hash });
+        },
+      });
+    }
+
+    res.json({
+      queued: uncached.length,
+      alreadyCached: cachedSet.size,
+    });
+  } catch (error) {
+    serverLogger.error('Prefetch failed', error as Error);
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
 export default router;
