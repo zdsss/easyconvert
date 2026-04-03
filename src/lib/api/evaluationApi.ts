@@ -75,4 +75,14 @@ export const evaluationApi = {
     }
     return res.json();
   },
+
+  async retryFailed(taskId: string): Promise<{ retriedCount: number }> {
+    const res = await fetch(`${API_BASE}/evaluations/${taskId}/retry-failed`, {
+      method: 'POST',
+    });
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+    }
+    return res.json();
+  },
 };

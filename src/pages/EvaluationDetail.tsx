@@ -64,6 +64,7 @@ export default function EvaluationDetail() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [showComparison, setShowComparison] = useState(false);
+  const [retrying, setRetrying] = useState(false);
 
   useEffect(() => {
     if (id) loadTaskAndResults(id);
@@ -127,6 +128,19 @@ export default function EvaluationDetail() {
       return new Map(Object.entries(data));
     } catch { return undefined; }
   }
+
+  const handleRetryFailed = async () => {
+    if (!currentTask) return;
+    setRetrying(true);
+    try {
+      await evaluationApi.retryFailed(currentTask.id);
+      await loadTaskAndResults(currentTask.id);
+    } catch (error) {
+      logger.error('Failed to retry', error as Error);
+    } finally {
+      setRetrying(false);
+    }
+  };
 
   const handleSaveAnnotation = async (annotation: any) => {
     if (!selectedResult || !currentTask) return;
@@ -215,6 +229,16 @@ export default function EvaluationDetail() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {currentTask.stats.failureCount > 0 && (
+            <button
+              onClick={handleRetryFailed}
+              disabled={retrying}
+              className="btn-secondary flex items-center gap-1.5 text-sm"
+            >
+              <Icon name="refresh-cw" size={14} className={retrying ? 'animate-spin' : ''} />
+              {retrying ? '重试中...' : '重试失败'}
+            </button>
+          )}
           {results.length > 0 && (
             <>
               <button onClick={() => handleExportReport('json')} className="btn-ghost text-xs flex items-center gap-1.5">

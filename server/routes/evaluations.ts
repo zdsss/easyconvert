@@ -205,6 +205,45 @@ router.get('/:id/results', async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /evaluations/{id}/retry-failed:
+ *   post:
+ *     summary: 重试失败的评测结果
+ *     tags: [Evaluations]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: 重试成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 retriedCount:
+ *                   type: integer
+ *       500:
+ *         description: 服务器错误
+ */
+router.post('/:id/retry-failed', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `UPDATE evaluation_results SET status = 'pending' WHERE task_id = $1 AND status = 'failed' RETURNING id`,
+      [req.params.id]
+    );
+    res.json({ retriedCount: result.rowCount });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Failed to retry failed results:', error);
+    res.status(500).json({ error: message });
+  }
+});
+
 // 保存评测结果
 router.post('/:id/results', async (req, res) => {
   try {
