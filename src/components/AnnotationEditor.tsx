@@ -38,7 +38,7 @@ function ConfidenceBadge({ score }: { score?: number }) {
 export default function AnnotationEditor({ result, onSave, onCancel, prefillData, confidenceData }: Props) {
   const [annotation, setAnnotation] = useState<AnnotationData>(() => {
     if (result.annotation && Object.keys(result.annotation).length > 0) {
-      return result.annotation as AnnotationData;
+      return result.annotation as unknown as AnnotationData;
     }
     if (prefillData?.basics) {
       return { basics: { ...prefillData.basics } };

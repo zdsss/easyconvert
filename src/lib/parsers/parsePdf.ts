@@ -23,7 +23,7 @@ export async function parsePdf(file: File): Promise<string> {
 
 export async function parsePdfWithVisionFallback(
   file: File,
-  strategy?: import('../types').ParsingStrategy,
+  strategy?: import('../parsingStrategy').ParsingStrategy,
 ): Promise<import('../types').Resume | null> {
   const text = await parsePdf(file);
   if (text.trim().length >= 50) return null;
