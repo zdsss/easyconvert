@@ -480,6 +480,8 @@ export default function EvaluationDetail() {
         result={selectedResult}
         onClose={() => setSelectedResult(null)}
         onSaveAnnotation={handleSaveAnnotation}
+        prefillData={selectedResult?.parsedResume}
+        confidenceData={selectedResult?.parsedResume?.additional?._confidence}
       />
     </div>
   );
