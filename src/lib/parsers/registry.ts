@@ -19,3 +19,8 @@ class ParserRegistry {
 }
 
 export const parserRegistry = new ParserRegistry();
+
+import { textParser } from './parseText';
+import { markdownParser } from './parseMarkdown';
+parserRegistry.register(textParser);
+parserRegistry.register(markdownParser);
