@@ -185,7 +185,24 @@ async function extractWithTimeout(text: string, strategy: ParsingStrategy, pdfBa
       costTracker.setModel(config.model);
       costTracker.record(data.usage.prompt_tokens || 0, data.usage.completion_tokens || 0);
     }
-    return JSON.parse(data.choices[0].message.content);
+    const parsed = JSON.parse(data.choices[0].message.content);
+
+    const confidenceMap: Record<string, number> = {};
+    function extractConfidence(obj: Record<string, unknown>, prefix = '') {
+      for (const [k, v] of Object.entries(obj)) {
+        if (k.endsWith('_confidence') && typeof v === 'number') {
+          confidenceMap[prefix + k.replace('_confidence', '')] = v;
+        } else if (v && typeof v === 'object' && !Array.isArray(v)) {
+          extractConfidence(v as Record<string, unknown>, `${prefix}${k}.`);
+        }
+      }
+    }
+    extractConfidence(parsed as Record<string, unknown>);
+    if (Object.keys(confidenceMap).length > 0) {
+      parsed.additional = { ...parsed.additional, _confidence: confidenceMap };
+    }
+
+    return parsed;
   } catch (error: any) {
     if (error.name === 'AbortError') {
       throw new TimeoutError(`Request timeout after ${strategy.timeout}ms`);

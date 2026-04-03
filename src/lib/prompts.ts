@@ -18,6 +18,9 @@ function getFallbackPrompt(type: PromptType, scenario: Scenario): string {
 2. 工作经历：公司、职位、时间段
 3. 教育背景：学校、学位、专业、时间段
 
+对每个字段，同时返回一个 _confidence 值（0-1 浮点数），表示提取置信度。
+例如：{ "basics": { "name": "张三", "name_confidence": 0.95, "email": "a@b.com", "email_confidence": 0.8 } }
+
 返回JSON格式，字段名使用英文。`,
 
     standard: `提取完整简历信息：
@@ -35,6 +38,9 @@ function getFallbackPrompt(type: PromptType, scenario: Scenario): string {
 1. 日期统一格式：YYYY-MM 或 YYYY
 2. responsibilities为数组，每条单独提取
 3. 遇到逗号/顿号必须拆分
+
+对每个字段，同时返回一个 _confidence 值（0-1 浮点数），表示提取置信度。
+例如：{ "basics": { "name": "张三", "name_confidence": 0.95, "email": "a@b.com", "email_confidence": 0.8 } }
 
 返回标准JSON。`,
 
@@ -78,6 +84,9 @@ function getFallbackPrompt(type: PromptType, scenario: Scenario): string {
 - certificates: 证书数组
 - languages: 语言能力数组
 - summary: 自我评价
+
+对每个字段，同时返回一个 _confidence 值（0-1 浮点数），表示提取置信度。
+例如：{ "basics": { "name": "张三", "name_confidence": 0.95, "email": "a@b.com", "email_confidence": 0.8 } }
 
 返回完整JSON，确保数组字段为数组类型。`
   };
