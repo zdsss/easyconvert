@@ -17,6 +17,8 @@ const ApiOverview = lazy(() => import('./pages/ApiOverview'))
 const ApiKeys = lazy(() => import('./pages/ApiKeys'))
 const ApiUsage = lazy(() => import('./pages/ApiUsage'))
 const TenantPage = lazy(() => import('./pages/TenantPage'))
+const DataFlywheel = lazy(() => import('./pages/DataFlywheel'))
+const PromptLabPage = lazy(() => import('./pages/PromptLabPage'))
 
 function Root() {
   return (
@@ -47,6 +49,12 @@ function Root() {
 
             {/* Tenant management */}
             <Route path="/tenants" element={<TenantPage />} />
+
+            {/* Data flywheel */}
+            <Route path="/data-flywheel" element={<DataFlywheel />} />
+
+            {/* Prompt lab */}
+            <Route path="/prompt-lab" element={<PromptLabPage />} />
           </Routes>
         </Suspense>
       </AppLayout>

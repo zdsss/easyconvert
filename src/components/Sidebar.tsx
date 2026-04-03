@@ -28,6 +28,8 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { path: '/evaluation', label: '任务列表', icon: 'clipboard', match: /^\/evaluation(?!\/new)/ },
       { path: '/evaluation/new', label: '新建任务', icon: 'plus', match: /^\/evaluation\/new/ },
+      { path: '/data-flywheel', label: '数据飞轮', icon: 'refresh-cw', match: /^\/data-flywheel/ },
+      { path: '/prompt-lab', label: '提示词实验室', icon: 'settings', match: /^\/prompt-lab/ },
     ],
   },
   {
