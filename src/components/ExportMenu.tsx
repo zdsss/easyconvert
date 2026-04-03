@@ -30,12 +30,18 @@ export default function ExportMenu({ resume }: Props) {
         导出
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1 bg-surface border border-border rounded-lg shadow-lg z-20 min-w-[120px]">
+        <div className="absolute right-0 top-full mt-1 bg-surface border border-border rounded-lg shadow-lg z-20 min-w-[140px]">
           <button
             className="w-full px-3 py-2 text-sm text-left hover:bg-surface-secondary flex items-center gap-2 rounded-t-lg"
-            onClick={() => { exportToDocx(resume); setOpen(false); }}
+            onClick={() => { exportToDocx(resume, 'simple'); setOpen(false); }}
           >
-            <Icon name="file-text" size={14} /> Word (.docx)
+            <Icon name="file-text" size={14} /> Word 简洁版
+          </button>
+          <button
+            className="w-full px-3 py-2 text-sm text-left hover:bg-surface-secondary flex items-center gap-2"
+            onClick={() => { exportToDocx(resume, 'professional'); setOpen(false); }}
+          >
+            <Icon name="file-text" size={14} /> Word 专业版
           </button>
           <button
             className="w-full px-3 py-2 text-sm text-left hover:bg-surface-secondary flex items-center gap-2 rounded-b-lg"

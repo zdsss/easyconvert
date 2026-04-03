@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import pool from '../db';
+import { serverLogger } from '../lib/logger';
 
 const router = Router();
 
@@ -43,7 +44,7 @@ router.post('/', async (req, res) => {
     res.json(result.rows[0]);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Failed to create evaluation:', error);
+    serverLogger.error('Failed to create evaluation', error instanceof Error ? error : new Error(String(error)));
     res.status(500).json({ error: message });
   }
 });
@@ -93,7 +94,7 @@ router.get('/', async (req, res) => {
     res.json(result.rows);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Failed to fetch tasks:', error);
+    serverLogger.error('Failed to fetch tasks', error instanceof Error ? error : new Error(String(error)));
     res.status(500).json({ error: message });
   }
 });
@@ -127,7 +128,7 @@ router.get('/:id', async (req, res) => {
     res.json(result.rows[0]);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Failed to get task:', error);
+    serverLogger.error('Failed to get task', error instanceof Error ? error : new Error(String(error)));
     res.status(500).json({ error: message });
   }
 });
@@ -171,7 +172,7 @@ router.put('/:id', async (req, res) => {
     res.json(result.rows[0]);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Failed to update task:', error);
+    serverLogger.error('Failed to update task', error instanceof Error ? error : new Error(String(error)));
     res.status(500).json({ error: message });
   }
 });
@@ -200,7 +201,7 @@ router.get('/:id/results', async (req, res) => {
     res.json(result.rows);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Failed to get results:', error);
+    serverLogger.error('Failed to get results', error instanceof Error ? error : new Error(String(error)));
     res.status(500).json({ error: message });
   }
 });
@@ -239,7 +240,7 @@ router.post('/:id/retry-failed', async (req, res) => {
     res.json({ retriedCount: result.rowCount });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Failed to retry failed results:', error);
+    serverLogger.error('Failed to retry failed results', error instanceof Error ? error : new Error(String(error)));
     res.status(500).json({ error: message });
   }
 });
@@ -256,7 +257,7 @@ router.post('/:id/results', async (req, res) => {
     res.json(result.rows[0]);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Failed to save result:', error);
+    serverLogger.error('Failed to save result', error instanceof Error ? error : new Error(String(error)));
     res.status(500).json({ error: message });
   }
 });

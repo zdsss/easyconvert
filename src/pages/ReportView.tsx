@@ -6,6 +6,7 @@ import AccuracyHeatmap from '@components/AccuracyHeatmap';
 import MetricCard from '@components/ui/MetricCard';
 import Icon from '@components/ui/Icon';
 import Skeleton from '@components/ui/Skeleton';
+import { exportReportToPdf } from '@lib/export/reportToPdf';
 
 interface TrendPoint { date: string; accuracy: number; count: number; }
 interface Distribution { difficulty: Record<string, number>; completeness: Record<string, number>; scenario: Record<string, number>; }
@@ -79,7 +80,7 @@ export default function ReportView() {
   };
 
   const handleExportPDF = () => {
-    window.print();
+    exportReportToPdf({ trends, distribution, errors, cost, fieldAccuracy });
   };
 
   if (loading) return (

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { processResume } from '../lib/resumeProcessor';
 import { jobQueue } from '../lib/jobQueue';
+import { deliverWebhook } from '../lib/webhookDelivery';
 import { serverLogger } from '../lib/logger';
 import db from '../db';
 import type { AuthenticatedRequest } from '../types';
@@ -112,13 +113,20 @@ router.post('/async', async (req: AuthenticatedRequest, res) => {
     const fileName = req.file.originalname;
     const fileSize = req.file.size;
     const mimeType = req.file.mimetype;
+    const webhookUrl: string | undefined = req.body?.webhookUrl;
 
     // 创建任务记录
-    const jobResult = await db.query(
-      `INSERT INTO parse_jobs (tenant_id, api_key_id, file_name, file_size, mime_type)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [req.tenantId || null, req.apiKeyId || null, fileName, fileSize, mimeType]
-    );
+    const jobResult = webhookUrl
+      ? await db.query(
+          `INSERT INTO parse_jobs (tenant_id, api_key_id, file_name, file_size, mime_type, webhook_url)
+           VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+          [req.tenantId || null, req.apiKeyId || null, fileName, fileSize, mimeType, webhookUrl]
+        )
+      : await db.query(
+          `INSERT INTO parse_jobs (tenant_id, api_key_id, file_name, file_size, mime_type)
+           VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+          [req.tenantId || null, req.apiKeyId || null, fileName, fileSize, mimeType]
+        );
 
     const job = jobResult.rows[0];
 
@@ -132,16 +140,44 @@ router.post('/async', async (req: AuthenticatedRequest, res) => {
         const file: ServerFileInput = { buffer: fileBuffer, name: fileName, size: fileSize, mimeType };
         const startTime = Date.now();
 
+        let finalStatus: 'completed' | 'failed' = 'completed';
+        let jobResult: any = null;
+        let jobError: string | null = null;
+
         try {
           const result = await processResume(file);
+          jobResult = result.resume;
           await db.query(
             `UPDATE parse_jobs SET status = $1, result = $2, file_hash = $3, processing_time = $4, completed_at = NOW() WHERE id = $5`,
             ['completed', JSON.stringify(result.resume), result.hash, Date.now() - startTime, job.id]
           );
         } catch (error) {
+          finalStatus = 'failed';
+          jobError = (error as Error).message;
           await db.query(
             `UPDATE parse_jobs SET status = $1, error = $2, completed_at = NOW() WHERE id = $3`,
-            ['failed', (error as Error).message, job.id]
+            ['failed', jobError, job.id]
+          );
+        }
+
+        // Deliver webhook if configured
+        if (webhookUrl) {
+          const payload: any = {
+            jobId: job.id,
+            status: finalStatus,
+            completedAt: new Date().toISOString(),
+          };
+          if (finalStatus === 'completed') {
+            payload.result = jobResult;
+          } else {
+            payload.error = jobError;
+          }
+
+          const delivered = await deliverWebhook(webhookUrl, payload);
+          const webhookStatus = delivered ? 'delivered' : 'failed';
+          await db.query(
+            `UPDATE parse_jobs SET webhook_status = $1 WHERE id = $2`,
+            [webhookStatus, job.id]
           );
         }
       },

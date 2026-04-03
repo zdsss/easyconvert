@@ -1,7 +1,11 @@
 import { Pool } from 'pg';
 import { memoryDb } from './memory';
 
-const DATABASE_URL = process.env.DATABASE_URL;
+// 支持 DATABASE_URL 或分开的 DB_* 变量
+const DATABASE_URL = process.env.DATABASE_URL
+  || (process.env.DB_HOST
+    ? `postgresql://${process.env.DB_USER || 'postgres'}:${process.env.DB_PASSWORD || 'postgres'}@${process.env.DB_HOST}:${process.env.DB_PORT || '5432'}/${process.env.DB_NAME || 'easyconvert'}`
+    : undefined);
 
 let db: any;
 
@@ -18,4 +22,5 @@ if (DATABASE_URL) {
   db = memoryDb;
 }
 
+export { runMigrations } from './migrate';
 export default db;

@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import { useParseHistoryStore } from '@lib/store/parseHistoryStore';
-import ParseHistoryDrawer from '@components/ParseHistoryDrawer';
-import ExportMenu from '@components/ExportMenu';
+const ParseHistoryDrawer = lazy(() => import('@components/ParseHistoryDrawer'));
+const ExportMenu = lazy(() => import('@components/ExportMenu'));
 import Icon from '@components/ui/Icon';
 import EmptyState from '@components/ui/EmptyState';
 import Pagination from '@components/ui/Pagination';
@@ -180,7 +180,7 @@ export default function ParseHistoryPage() {
                       <td className="px-4 py-3 text-text-secondary text-xs">{new Date(item.created_at).toLocaleString()}</td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1">
-                          {item.result && <ExportMenu resume={item.result} />}
+                          {item.result && <Suspense fallback={null}><ExportMenu resume={item.result} /></Suspense>}
                           <button
                             onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}
                             className="btn-ghost p-1 text-text-tertiary hover:text-status-error"
@@ -207,11 +207,15 @@ export default function ParseHistoryPage() {
       )}
 
       {/* Detail drawer */}
-      <ParseHistoryDrawer
-        item={selectedItem}
-        onClose={() => setSelectedItem(null)}
-        onDelete={handleDelete}
-      />
+      <Suspense fallback={null}>
+        {selectedItem && (
+          <ParseHistoryDrawer
+            item={selectedItem}
+            onClose={() => setSelectedItem(null)}
+            onDelete={handleDelete}
+          />
+        )}
+      </Suspense>
 
       {/* Clear confirm dialog */}
       <ConfirmDialog
