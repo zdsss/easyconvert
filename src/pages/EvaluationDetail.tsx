@@ -449,6 +449,12 @@ export default function EvaluationDetail() {
         const resultA = results.find(r => r.id === idA);
         const resultB = results.find(r => r.id === idB);
         if (!resultA || !resultB) return null;
+        // If resultA has annotation, compare parsed vs annotation; otherwise compare two parsed resumes
+        const useAnnotation = !!(resultA.annotation);
+        const leftResume = resultA.parsedResume;
+        const rightResume = useAnnotation ? (resultA.annotation as any) : resultB.parsedResume;
+        const leftLabel = resultA.fileName;
+        const rightLabel = useAnnotation ? `${resultA.fileName} (标注)` : resultB.fileName;
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowComparison(false)} />
@@ -460,10 +466,10 @@ export default function EvaluationDetail() {
                 </button>
               </div>
               <div className="flex gap-4 mb-4 text-sm">
-                <div className="flex-1 p-2 bg-brand-50 dark:bg-brand-900/20 rounded-lg text-brand-700 dark:text-brand-400 font-medium truncate">{resultA.fileName}</div>
-                <div className="flex-1 p-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg text-emerald-700 dark:text-emerald-400 font-medium truncate">{resultB.fileName}</div>
+                <div className="flex-1 p-2 bg-brand-50 dark:bg-brand-900/20 rounded-lg text-brand-700 dark:text-brand-400 font-medium truncate">{leftLabel}</div>
+                <div className="flex-1 p-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg text-emerald-700 dark:text-emerald-400 font-medium truncate">{rightLabel}</div>
               </div>
-              <ComparisonView parsed={resultA.parsedResume} annotation={resultB.parsedResume} />
+              <ComparisonView parsed={leftResume} annotation={rightResume} />
             </div>
           </div>
         );

@@ -67,7 +67,7 @@ export default function ReportView() {
         }
         // Fallback: derive from overall metrics if no field-level data
         if (Object.keys(aggregated).length === 0) {
-          const fields = ['basics.name', 'basics.email', 'basics.phone', 'basics.title', 'basics.location', 'work', 'education', 'skills'];
+          const fields = ['basics.name', 'basics.email', 'basics.phone', 'basics.title', 'basics.location', 'work[0].company', 'work[0].position', 'education[0].institution', 'education[0].degree', 'skills'];
           const avgAccuracy = resultsRes.reduce((s: number, r: any) => s + (r.metrics?.accuracy ?? 0), 0) / resultsRes.length;
           for (const f of fields) {
             aggregated[f] = { accuracy: avgAccuracy, matchType: 'avg' };
