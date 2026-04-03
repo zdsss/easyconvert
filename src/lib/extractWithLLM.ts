@@ -23,14 +23,14 @@ function getRetryDelay(error: any): number {
   return 0;
 }
 
-export async function extractResume(text: string, strategy?: ParsingStrategy): Promise<Resume> {
+export async function extractResume(text: string, strategy?: ParsingStrategy, pdfBase64?: string): Promise<Resume> {
   const strat = strategy || { timeout: 10000, temperature: 0.05, maxRetries: 2, promptType: 'standard', validationLevel: 'standard' };
 
-  const cacheKey = `${text.substring(0, 100)}-${strat.promptType}`;
+  const cacheKey = `${(pdfBase64 || text).substring(0, 100)}-${strat.promptType}`;
   return deduplicateRequest(cacheKey, async () => {
     for (let attempt = 0; attempt <= strat.maxRetries; attempt++) {
       try {
-        return await circuitBreaker.execute(() => extractWithTimeout(text, strat));
+        return await circuitBreaker.execute(() => extractWithTimeout(text, strat, pdfBase64));
       } catch (error) {
         if (attempt === strat.maxRetries || !isRetryableError(error)) throw error;
         const delay = getRetryDelay(error);
@@ -42,7 +42,7 @@ export async function extractResume(text: string, strategy?: ParsingStrategy): P
   });
 }
 
-async function extractWithTimeout(text: string, strategy: ParsingStrategy): Promise<Resume> {
+async function extractWithTimeout(text: string, strategy: ParsingStrategy, pdfBase64?: string): Promise<Resume> {
   const provider = import.meta.env.VITE_LLM_PROVIDER || 'qwen';
   const apiKey = import.meta.env[`VITE_${provider.toUpperCase()}_API_KEY`];
 
@@ -145,6 +145,12 @@ async function extractWithTimeout(text: string, strategy: ParsingStrategy): Prom
 
   try {
     const prompt = getPrompt(strategy.promptType, strategy.scenario);
+    const userContent = (provider === 'claude' && pdfBase64)
+      ? [
+          { type: 'document' as const, source: { type: 'base64' as const, media_type: 'application/pdf' as const, data: pdfBase64 } },
+          { type: 'text' as const, text: prompt },
+        ]
+      : `${prompt}\n\n简历文本：\n${text}`;
     const response = await fetch(config.url, {
       signal: controller.signal,
       method: 'POST',
@@ -156,7 +162,7 @@ async function extractWithTimeout(text: string, strategy: ParsingStrategy): Prom
         model: config.model,
         messages: [{
           role: 'user',
-          content: `${prompt}\n\n简历文本：\n${text}`
+          content: userContent,
         }],
         response_format: provider === 'qwen' ? {
           type: 'json_schema',
@@ -176,6 +182,7 @@ async function extractWithTimeout(text: string, strategy: ParsingStrategy): Prom
 
     const data = await response.json();
     if (data.usage) {
+      costTracker.setModel(config.model);
       costTracker.record(data.usage.prompt_tokens || 0, data.usage.completion_tokens || 0);
     }
     return JSON.parse(data.choices[0].message.content);

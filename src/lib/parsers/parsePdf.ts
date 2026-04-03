@@ -20,3 +20,20 @@ export async function parsePdf(file: File): Promise<string> {
     throw new Error('PDF文件格式错误或已损坏');
   }
 }
+
+export async function parsePdfWithVisionFallback(
+  file: File,
+  strategy?: import('../types').ParsingStrategy,
+): Promise<import('../types').Resume | null> {
+  const text = await parsePdf(file);
+  if (text.trim().length >= 50) return null;
+
+  const arrayBuffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(arrayBuffer);
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+  const base64 = btoa(binary);
+
+  const { extractResume } = await import('../extractWithLLM');
+  return extractResume('', strategy, base64);
+}
