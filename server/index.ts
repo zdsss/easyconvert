@@ -18,6 +18,7 @@ import keysRouter from './routes/keys';
 import parseRouter from './routes/parse';
 import usageRouter from './routes/usage';
 import parseHistoryRouter from './routes/parseHistory';
+import tenantsRouter from './routes/tenants';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -56,6 +57,7 @@ app.use('/api/reports', reportsRouter);
 app.use('/api/keys', keysRouter);
 app.use('/api/usage', usageRouter);
 app.use('/api/parse-history', parseHistoryRouter);
+app.use('/api/tenants', tenantsRouter);
 
 // 外部 API 路由（需认证 + 限流 — 第三方调用）
 app.use('/api/v1', authMiddleware);

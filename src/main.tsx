@@ -16,6 +16,7 @@ const ReportView = lazy(() => import('./pages/ReportView'))
 const ApiOverview = lazy(() => import('./pages/ApiOverview'))
 const ApiKeys = lazy(() => import('./pages/ApiKeys'))
 const ApiUsage = lazy(() => import('./pages/ApiUsage'))
+const TenantPage = lazy(() => import('./pages/TenantPage'))
 
 function Root() {
   return (
@@ -43,6 +44,9 @@ function Root() {
             <Route path="/api" element={<ApiOverview />} />
             <Route path="/api/keys" element={<ApiKeys />} />
             <Route path="/api/usage" element={<ApiUsage />} />
+
+            {/* Tenant management */}
+            <Route path="/tenants" element={<TenantPage />} />
           </Routes>
         </Suspense>
       </AppLayout>
