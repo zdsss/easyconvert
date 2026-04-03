@@ -23,6 +23,17 @@ function adaptTaskResponse(task: TaskResponse): EvaluationTask {
   };
 }
 
+function LanguageBadge({ lang }: { lang?: string }) {
+  if (!lang || lang === 'unknown') return null;
+  const map: Record<string, { label: string; cls: string }> = {
+    zh: { label: 'ZH', cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
+    en: { label: 'EN', cls: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
+    ja: { label: 'JA', cls: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
+  };
+  const { label, cls } = map[lang] ?? { label: lang.toUpperCase(), cls: 'bg-surface-secondary text-text-secondary' };
+  return <span className={`px-1.5 py-0.5 rounded text-xs font-mono font-semibold ${cls}`}>{label}</span>;
+}
+
 const STATUS_MAP: Record<string, { label: string; class: string }> = {
   completed: { label: '已完成', class: 'badge-success' },
   processing: { label: '处理中', class: 'badge-info' },
@@ -344,7 +355,12 @@ export default function EvaluationDetail() {
                             className="rounded border-gray-300 text-brand-600 focus:ring-brand-500"
                           />
                         </td>
-                        <td className="px-4 py-3 font-medium text-text-primary">{result.fileName}</td>
+                        <td className="px-4 py-3 font-medium text-text-primary">
+                          <div className="flex items-center gap-2">
+                            {result.fileName}
+                            <LanguageBadge lang={result.parsedResume?.additional?.language} />
+                          </div>
+                        </td>
                         <td className="px-4 py-3 font-mono">{result.error ? '-' : `${result.metrics.accuracy.toFixed(1)}%`}</td>
                         <td className="px-4 py-3 font-mono">{result.error ? '-' : `${result.metrics.completeness.toFixed(1)}%`}</td>
                         <td className="px-4 py-3 text-text-secondary font-mono">{result.processingTime}ms</td>

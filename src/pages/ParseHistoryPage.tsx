@@ -17,6 +17,17 @@ const STATUS_MAP: Record<string, { label: string; class: string; dotClass: strin
   pending: { label: '待处理', class: 'badge-neutral', dotClass: 'bg-gray-400' },
 };
 
+function LanguageBadge({ lang }: { lang?: string }) {
+  if (!lang || lang === 'unknown') return null;
+  const map: Record<string, { label: string; cls: string }> = {
+    zh: { label: 'ZH', cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
+    en: { label: 'EN', cls: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
+    ja: { label: 'JA', cls: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
+  };
+  const { label, cls } = map[lang] ?? { label: lang.toUpperCase(), cls: 'bg-surface-secondary text-text-secondary' };
+  return <span className={`px-1.5 py-0.5 rounded text-xs font-mono font-semibold ${cls}`}>{label}</span>;
+}
+
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -155,6 +166,7 @@ export default function ParseHistoryPage() {
                         <div className="flex items-center gap-2">
                           <Icon name="file-text" size={16} className="text-text-tertiary shrink-0" />
                           <span className="font-medium text-text-primary truncate max-w-[200px]">{item.file_name}</span>
+                          <LanguageBadge lang={item.result?.additional?.language} />
                         </div>
                       </td>
                       <td className="px-4 py-3">
