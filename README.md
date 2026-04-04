@@ -7,23 +7,21 @@
 ### 环境要求
 
 - Node.js >= 16
-- Python >= 3.8（辅助脚本）
+- Python >= 3.8（辅助脚本，可选）
 - PostgreSQL（可选，不配置则使用内存存储）
 
 ### 安装与启动
 
 ```bash
-# 安装依赖
 npm install
 
-# 配置环境变量
 cp .env.example .env
-# 编辑 .env，填入 LLM API Key（支持 Qwen / DeepSeek / Claude / OpenAI）
+# 编辑 .env，填入 LLM API Key
 
-# 启动前端（Vite dev server）
+# 前端（Vite dev server）
 npm run dev
 
-# 启动后端（另一个终端）
+# 后端（另一个终端）
 npm run server
 
 # 生产构建
@@ -33,29 +31,34 @@ npm run build && npm run preview
 ### 环境变量
 
 ```bash
-# .env（前端）
+# .env
 VITE_LLM_PROVIDER=qwen          # qwen / deepseek / claude / openai
 VITE_QWEN_API_KEY=your_key
 VITE_DEEPSEEK_API_KEY=your_key
+VITE_LOG_LEVEL=INFO
 
-# server/.env（后端，可选）
+# 后端
 PORT=3001
-DATABASE_URL=postgresql://postgres@localhost:5432/easyconvert_eval
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=easyconvert
+DB_USER=postgres
+DB_PASSWORD=postgres
 ```
 
-不配置 `DATABASE_URL` 时后端自动使用内存存储，适合开发调试。
+不配置数据库时后端自动使用内存存储（`server/db/memory.ts`），适合开发调试。
 
-## 系统架构
+## 架构
 
 ```
 ┌─────────────────────────────────────────────────────────┐
 │  Frontend (React + Vite + Tailwind + Zustand)           │
-│  14 pages: 解析 / 批量 / 监控 / 评测 / API管理 / 飞轮   │
+│  14 pages · 7 stores · IndexedDB 缓存                   │
 └────────────────────────┬────────────────────────────────┘
                          │ REST API
 ┌────────────────────────▼────────────────────────────────┐
-│  Backend (Express.js)                                    │
-│  认证 → 限流 → 路由 → 处理器 → LLM → 缓存 → DB         │
+│  Backend (Express.js + tsx)                              │
+│  认证 → 限流 → 路由(10) → 处理器 → LLM → 缓存 → DB     │
 └────────────────────────┬────────────────────────────────┘
                          │
           ┌──────────────┼──────────────┐
@@ -77,13 +80,13 @@ DATABASE_URL=postgresql://postgres@localhost:5432/easyconvert_eval
 
 ## 功能模块
 
-| 模块 | 页面 | 说明 |
+| 模块 | 路由 | 说明 |
 |------|------|------|
 | 单文件解析 | `/parse` | 上传简历，实时查看解析阶段和结构化结果 |
-| 批量处理 | `/parse/batch` | 多文件并发处理，自适应并发控制 |
-| 监控面板 | `/parse/monitor` | 成功率、缓存命中率、延迟、成本追踪 |
+| 批量处理 | `/parse/batch` | 多文件并发，自适应并发控制 |
+| 监控面板 | `/parse/monitor` | 成功率、缓存命中率、延迟分位、成本追踪 |
 | 解析历史 | `/parse/history` | 历史记录查询和管理 |
-| 评测系统 | `/evaluation/*` | 创建评测任务，对比 ground-truth，计算字段级准确率 |
+| 评测系统 | `/evaluation/*` | 创建评测任务，对比 ground-truth，字段级准确率 |
 | API 管理 | `/api/*` | API Key 管理、用量统计、Swagger 文档 |
 | 多租户 | `/tenants` | 租户隔离和管理 |
 | 数据飞轮 | `/data-flywheel` | 低置信度样本筛选，主动学习闭环 |
@@ -94,16 +97,17 @@ DATABASE_URL=postgresql://postgres@localhost:5432/easyconvert_eval
 ```
 easyconvert/
 ├── src/                            # 前端源码
-│   ├── components/                 # UI 组件（Sidebar, Icon, Toast, Drawer 等）
-│   ├── pages/                      # 14 个页面组件
+│   ├── components/                 # UI 组件（30+ 组件）
+│   │   └── ui/                     # 基础 UI（Toast, Drawer, Icon, Skeleton 等）
+│   ├── pages/                      # 14 个页面
 │   ├── lib/
 │   │   ├── core/                   # resumeProcessor 解析编排器
 │   │   ├── classifiers/            # 难度分类器（basic + advanced 5维加权）
-│   │   ├── parsers/                # 文件解析器（PDF, DOCX, Text, Markdown）
-│   │   ├── prompts/                # 提示词引擎 + 模板
+│   │   ├── parsers/                # 文件解析（PDF, DOCX, Text, Markdown）
+│   │   ├── prompts/                # 提示词引擎
 │   │   ├── validation/             # Zod schema + 验证引擎
-│   │   ├── monitoring/             # 性能监控 + 成本追踪
-│   │   ├── export/                 # DOCX 导出 + 用量报表
+│   │   ├── monitoring/             # 性能监控(p50/p95/p99) + 成本追踪
+│   │   ├── export/                 # DOCX 导出 + 用量报表 + PDF 报告
 │   │   ├── store/                  # Zustand 状态管理（7 个 store）
 │   │   ├── api/                    # 后端 API 调用封装
 │   │   ├── extractWithLLM.ts       # LLM 调用核心（重试/超时/熔断）
@@ -111,84 +115,97 @@ easyconvert/
 │   │   ├── batchProcessor.ts       # 批量处理管道
 │   │   ├── parsingStrategy.ts      # 9 格策略矩阵
 │   │   └── types.ts                # 核心类型定义
-│   └── locales/                    # i18n（中文/英文）
+│   └── locales/                    # i18n（zh / en）
 │
 ├── server/                         # 后端源码
 │   ├── routes/                     # 10 个 API 路由模块
 │   ├── lib/                        # 后端业务逻辑
 │   │   └── llm/                    # LLM 适配器（Claude/OpenAI/DeepSeek/Qwen）
-│   ├── db/                         # PostgreSQL + 9 个迁移文件
+│   ├── db/                         # PostgreSQL + 9 个迁移 + 内存存储
 │   ├── middleware/                  # auth / rateLimit / requestLogger
 │   ├── __tests__/                  # 后端测试（10 个文件）
-│   └── docs/openapi.yaml           # Swagger 定义
+│   └── docs/openapi.yaml           # Swagger/OpenAPI 定义
 │
-├── scripts/                        # Python 辅助脚本
-├── test-resumes/                   # 测试简历样本
-├── docs/                           # 设计文档
-└── .github/workflows/              # CI 配置
+├── scripts/                        # Python 辅助脚本（3 个）
+├── test-resumes/                   # 测试简历（3768 真实 + 18 合成）
+├── docs/                           # 参考文档
+└── .github/workflows/ci.yml        # CI
 ```
 
 ## 后端 API
 
-### 外部 API（需 API Key 认证）
+### 外部 API（需 API Key 认证 + 限流）
 
 | 端点 | 方法 | 说明 |
 |------|------|------|
 | `/api/v1/parse` | POST | 同步解析单份简历 |
 | `/api/v1/parse/async` | POST | 异步解析，返回 jobId |
-| `/api/v1/parse/batch` | POST | 批量异步解析 |
+| `/api/v1/parse/batch` | POST | 批量异步解析（最多 20 文件） |
 | `/api/v1/parse/:jobId` | GET | 查询异步任务状态 |
+| `/api/v1/health` | GET | 健康检查 |
 
-### 内部 API
+### 内部 API（前端管理页面使用，无需认证）
 
-评测（`/api/evaluations`）、标注（`/api/annotations`）、解析历史（`/api/parse-history`）、API Key 管理（`/api/keys`）、用量（`/api/usage`）、租户（`/api/tenants`）、数据飞轮（`/api/data-flywheel`）、提示词实验（`/api/prompt-experiments`）。
+| 路由前缀 | 说明 |
+|----------|------|
+| `/api/evaluations` | 评测任务 CRUD |
+| `/api/annotations` | 标注管理 |
+| `/api/parse-history` | 解析历史 |
+| `/api/keys` | API Key 管理 |
+| `/api/usage` | 用量统计 |
+| `/api/tenants` | 租户管理 |
+| `/api/data-flywheel` | 数据飞轮 |
+| `/api/prompt-experiments` | 提示词实验 |
+| `/api/reports` | 评测报告 |
+| `/api/alerts/webhook` | 告警 Webhook 转发 |
 
 完整定义见 `server/docs/openapi.yaml`，启动后访问 `/api/docs` 查看 Swagger UI。
 
 ## 测试
 
 ```bash
-# 运行全部测试（26 个文件，128 个用例）
+# 全部测试（26 个文件）
 npm test
 
 # 带覆盖率
 npm run test:coverage
-
-# 端到端快速验证（需启动服务）
-python scripts/test_quick_validation.py
 ```
+
+测试分布：前端 16 个（解析器、分类器、缓存、验证、导出等）+ 后端 10 个（路由、认证、限流、队列等）。
 
 ## 辅助脚本
 
 | 脚本 | 功能 |
 |------|------|
-| `scripts/cli.py` | 统一 CLI 入口 |
-| `scripts/reclassify_by_parsing_difficulty.py` | 按解析难度重新分类简历 |
-| `scripts/select_stratified_test_set.py` | 分层抽样选择测试集 |
-| `scripts/evaluate_classifier.py` | 分类器准确率评估 |
-| `scripts/evaluate_accuracy.py` | 字段级准确率评估 |
-| `scripts/generate_test_resumes.py` | 生成测试简历 DOCX |
-| `scripts/generate_edge_cases.py` | 生成边缘情况测试简历 |
-| `scripts/test_quick_validation.py` | 快速验证测试 |
+| `scripts/reclassify_by_parsing_difficulty.py` | 按 5 维特征对简历分类难度 |
+| `scripts/select_stratified_test_set.py` | 从分类结果中分层抽样测试集 |
+| `scripts/generate_test_resumes.py` | 生成合成测试简历 DOCX |
 
-## 文档索引
+## 文档
 
 | 文档 | 说明 |
 |------|------|
-| [架构路线图](docs/plans/2026-04-02-architecture-roadmap-design.md) | 当前架构方向和演进计划 |
-| [迭代总设计](docs/plans/2026-04-03-iteration-v2-design.md) | Phase 分阶段策略总纲 |
 | [解析难度分类指南](docs/plans/parsing-difficulty-classification-guide.md) | 5 维难度分类方案 |
-| [UI/UX 设计方案](docs/plans/glm-easyconvert-uiux.md) | Design Tokens、色彩、间距规范 |
-| [评测系统文档](docs/evaluation-system.md) | 评测系统安装和使用 |
+| [评测系统文档](docs/evaluation-system.md) | 评测系统架构和使用 |
 | [标注规范](docs/annotation-guide.md) | 简历标注流程参考 |
 | [LLM 模型对比](docs/llm-comparison-resume-parsing.md) | Claude/GPT/国产模型对比 |
+| [初始调研](docs/research/2026-03-30-resume-converter-research.md) | 市场分析和技术选型 |
+
+## 已知技术债
+
+- 前后端 `extractWithLLM` / `resumeProcessor` / `parsePdf` / `parseDocx` 大量重复代码，应抽取共享核心模块
+- `server/` 有 17 处直接 import `../../src/` 前端模块，跨越架构边界（Vite `import.meta.env` 在 Node 下不确定）
+- `server/db/memory.ts` 用字符串匹配模拟 SQL，544 行条件分支，维护成本高
+- `validators.ts` 和 `validation/engine.ts` 职责重叠（手动校验 vs Zod schema）
+- `resolveTenantId` 在 `keys.ts` 和 `usage.ts` 中重复定义
+- 两套成本追踪实现（前端 `monitoring/cost.ts` 有定价表，后端用固定 $0.5/M）
 
 ## 技术栈
 
-- **前端**: React + TypeScript + Vite + Tailwind CSS + Zustand
+- **前端**: React 18 + TypeScript + Vite + Tailwind CSS + Zustand
 - **后端**: Express.js + PostgreSQL + tsx
 - **LLM**: Qwen / DeepSeek / Claude / OpenAI（适配器模式）
 - **解析**: pdfjs-dist, mammoth
 - **验证**: Zod
-- **测试**: Vitest（128 tests across 26 files）
+- **测试**: Vitest（26 files）
 - **i18n**: 中文 / English
