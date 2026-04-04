@@ -9,7 +9,11 @@
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "noEmit": true
+    "noEmit": true,
+    "baseUrl": "..",
+    "paths": {
+      "@shared/*": ["src/lib/*"]
+    }
   },
   "include": ["**/*.ts"],
   "exclude": ["__tests__"]

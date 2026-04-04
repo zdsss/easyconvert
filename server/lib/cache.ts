@@ -1,6 +1,6 @@
 import db from '../db';
 import { serverLogger } from './logger';
-import type { CacheData } from '../../src/lib/types';
+import type { CacheData } from '@shared/types';
 
 const CACHE_TTL_DAYS = 30;
 const CACHE_MAX_ENTRIES = 5000;

@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import type { Resume } from '../../src/lib/types';
+import type { Resume } from '@shared/types';
 
 export function hashResume(resume: Resume): string {
   const keys = Object.keys(resume as object).sort();

@@ -20,7 +20,8 @@
       "@/*": ["src/*"],
       "@lib/*": ["src/lib/*"],
       "@components/*": ["src/components/*"],
-      "@pages/*": ["src/pages/*"]
+      "@pages/*": ["src/pages/*"],
+      "@shared/*": ["src/lib/*"]
     }
   },
   "include": ["src"],

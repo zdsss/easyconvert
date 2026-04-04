@@ -6,15 +6,15 @@ import { getCached, setCache } from './cache';
 import { serverLogger } from './logger';
 import { hashResume, checkDuplicate, registerResult } from './dedup';
 import type { ServerFileInput } from './types';
-import type { Resume, CacheData } from '../../src/lib/types';
-import type { StageName } from '../../src/lib/processTracer';
+import type { Resume, CacheData } from '@shared/types';
+import type { StageName } from '@shared/processTracer';
 
 // 直接复用同构模块
-import { classifyResume } from '../../src/lib/classifiers';
-import { getStrategy } from '../../src/lib/parsingStrategy';
-import { classifyContent } from '../../src/lib/classifiers/contentClassifier';
-import { validateWithZod } from '../../src/lib/validation/engine';
-import { runWithLimit } from '../../src/lib/concurrency';
+import { classifyResume } from '@shared/classifiers';
+import { getStrategy } from '@shared/parsingStrategy';
+import { classifyContent } from '@shared/classifiers/contentClassifier';
+import { validateWithZod } from '@shared/validation/engine';
+import { runWithLimit } from '@shared/concurrency';
 
 export interface ServerProcessOptions {
   enableCache?: boolean;

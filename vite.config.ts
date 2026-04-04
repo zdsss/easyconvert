@@ -9,7 +9,8 @@ export default defineConfig({
       '@': path.resolve(__dirname, 'src'),
       '@lib': path.resolve(__dirname, 'src/lib'),
       '@components': path.resolve(__dirname, 'src/components'),
-      '@pages': path.resolve(__dirname, 'src/pages')
+      '@pages': path.resolve(__dirname, 'src/pages'),
+      '@shared': path.resolve(__dirname, 'src/lib')
     }
   },
   build: {
@@ -39,6 +40,7 @@ export default defineConfig({
       '@lib': path.resolve(__dirname, 'src/lib'),
       '@components': path.resolve(__dirname, 'src/components'),
       '@pages': path.resolve(__dirname, 'src/pages'),
+      '@shared': path.resolve(__dirname, 'src/lib'),
     }
   }
 })

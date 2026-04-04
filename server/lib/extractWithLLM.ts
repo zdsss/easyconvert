@@ -1,11 +1,11 @@
-import { getPrompt } from '../../src/lib/prompts';
-import { deduplicateRequest } from '../../src/lib/llmCache';
-import { circuitBreaker } from '../../src/lib/circuitBreaker';
+import { getPrompt } from '@shared/prompts';
+import { deduplicateRequest } from '@shared/llmCache';
+import { circuitBreaker } from '@shared/circuitBreaker';
 import { serverLogger } from './logger';
-import type { Resume } from '../../src/lib/types';
-import type { ParsingStrategy } from '../../src/lib/parsingStrategy';
+import type { Resume } from '@shared/types';
+import type { ParsingStrategy } from '@shared/parsingStrategy';
 
-export { TimeoutError } from '../../src/lib/types';
+export { TimeoutError } from '@shared/types';
 
 class ServerCostTracker {
   private calls = 0;
@@ -217,7 +217,7 @@ async function extractWithTimeout(text: string, strategy: ParsingStrategy, pdfBa
     return JSON.parse(data.choices[0].message.content);
   } catch (error: any) {
     if (error.name === 'AbortError') {
-      const { TimeoutError } = await import('../../src/lib/types');
+      const { TimeoutError } = await import('@shared/types');
       throw new TimeoutError(`Request timeout after ${strategy.timeout}ms`);
     }
     throw error;
