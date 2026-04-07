@@ -1,5 +1,6 @@
 import db from '../db';
 import { serverLogger } from './logger';
+import { calculateCost, DEFAULT_MODEL } from '@shared/pricing';
 
 export interface ReportData {
   task: any;
@@ -121,29 +122,39 @@ export async function getErrorPatterns(taskId: string) {
  * 成本追踪
  */
 export async function getCostReport(taskId: string) {
-  const results = await db.query(
-    'SELECT processing_time, from_cache FROM evaluation_results WHERE task_id = $1',
-    [taskId]
-  );
+  // Fetch task config (may contain model) + results in parallel
+  const [taskResult, resultsResult] = await Promise.all([
+    db.query('SELECT config FROM evaluation_tasks WHERE id = $1', [taskId]),
+    db.query(
+      'SELECT processing_time, from_cache FROM evaluation_results WHERE task_id = $1',
+      [taskId]
+    ),
+  ]);
 
-  const rows = results.rows;
+  const taskConfig = taskResult.rows[0]?.config;
+  const model = (typeof taskConfig === 'string' ? JSON.parse(taskConfig) : taskConfig)?.model || DEFAULT_MODEL;
+
+  const rows = resultsResult.rows;
   const nonCached = rows.filter((r: any) => !r.from_cache);
   const avgTime = nonCached.length > 0
     ? nonCached.reduce((sum: number, r: any) => sum + r.processing_time, 0) / nonCached.length
     : 0;
 
-  // 粗略估算 token 消耗（基于处理时间）
+  // 粗略估算 token 消耗（基于处理时间），假设 input:output ≈ 3:1
   const estimatedTokensPerFile = 2000;
   const totalTokens = nonCached.length * estimatedTokensPerFile;
-  const costPerMToken = 0.5;
+  const estimatedInput = Math.round(totalTokens * 0.75);
+  const estimatedOutput = totalTokens - estimatedInput;
+  const { totalCost } = calculateCost(model, estimatedInput, estimatedOutput);
 
   return {
     totalFiles: rows.length,
     cachedFiles: rows.filter((r: any) => r.from_cache).length,
     totalTokens,
-    estimatedCost: (totalTokens / 1000000) * costPerMToken,
+    estimatedCost: totalCost,
     avgTokensPerFile: estimatedTokensPerFile,
     avgProcessingTime: avgTime,
+    model,
   };
 }
 

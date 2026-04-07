@@ -82,18 +82,27 @@ describe('reportGenerator', () => {
 
   describe('getCostReport', () => {
     it('should calculate cost metrics', async () => {
-      mockQuery.mockResolvedValue({
-        rows: [
-          { processing_time: 1000, from_cache: false },
-          { processing_time: 2000, from_cache: false },
-          { processing_time: 50, from_cache: true },
-        ],
+      mockQuery.mockImplementation((text: string) => {
+        if (text.includes('evaluation_tasks')) {
+          return Promise.resolve({
+            rows: [{ config: { model: 'qwen-plus' } }],
+          });
+        }
+        return Promise.resolve({
+          rows: [
+            { processing_time: 1000, from_cache: false },
+            { processing_time: 2000, from_cache: false },
+            { processing_time: 50, from_cache: true },
+          ],
+        });
       });
 
       const cost = await getCostReport('task1');
       expect(cost.totalFiles).toBe(3);
       expect(cost.cachedFiles).toBe(1);
       expect(cost.avgProcessingTime).toBe(1500);
+      expect(cost.model).toBe('qwen-plus');
+      expect(cost.estimatedCost).toBeGreaterThan(0);
     });
   });
 });

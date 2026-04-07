@@ -1,14 +1,10 @@
-// 真实模型定价（元/千 token）— 2026 年 4 月
-const PRICING: Record<string, { input: number; output: number }> = {
-  'qwen-plus':     { input: 0.0008, output: 0.002 },   // 通义千问 Plus
-  'deepseek-chat': { input: 0.001,  output: 0.002 },   // DeepSeek Chat
-};
+import { calculateCost, DEFAULT_MODEL } from '@shared/pricing';
 
 class CostTracker {
   private calls = 0;
   private inputTokens = 0;
   private outputTokens = 0;
-  private model = 'qwen-plus';
+  private model = DEFAULT_MODEL;
 
   setModel(model: string) {
     this.model = model;
@@ -21,9 +17,11 @@ class CostTracker {
   }
 
   getStats() {
-    const pricing = PRICING[this.model] || PRICING['qwen-plus'];
-    const inputCost = (this.inputTokens / 1000) * pricing.input;
-    const outputCost = (this.outputTokens / 1000) * pricing.output;
+    const { inputCost, outputCost, totalCost } = calculateCost(
+      this.model,
+      this.inputTokens,
+      this.outputTokens,
+    );
 
     return {
       calls: this.calls,
@@ -32,7 +30,7 @@ class CostTracker {
       tokens: this.inputTokens + this.outputTokens,
       inputCost,
       outputCost,
-      estimatedCost: inputCost + outputCost,
+      estimatedCost: totalCost,
       model: this.model,
     };
   }
