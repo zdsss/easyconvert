@@ -15,14 +15,17 @@ export const resumeSchema = z.object({
     position: z.string(),
     startDate: z.string(),
     endDate: z.string().optional(),
-    responsibilities: z.array(z.string()).optional()
+    responsibilities: z.array(z.string()).optional(),
+    achievements: z.array(z.string()).optional()
   })).optional(),
   education: z.array(z.object({
-    school: z.string(),
+    institution: z.string(),
     degree: z.string().optional(),
     major: z.string().optional(),
     startDate: z.string(),
-    endDate: z.string().optional()
+    endDate: z.string().optional(),
+    courses: z.array(z.string()).optional(),
+    honors: z.array(z.string()).optional()
   })).optional(),
   skills: z.array(z.string()).optional(),
   projects: z.array(z.object({

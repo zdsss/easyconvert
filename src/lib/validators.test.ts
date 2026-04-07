@@ -24,7 +24,11 @@ describe('Validators', () => {
     expect(result.errors).toContain('邮箱格式无效');
   });
 
-  it('validate throws on invalid type', () => {
-    expect(() => validate({}, 'invalid' as any)).toThrow('Invalid validation type');
+  it('validate delegates to correct level', () => {
+    const basic = validate({ basics: { name: 'Test', email: 'test@example.com' } }, 'basic');
+    expect(basic.isValid).toBe(true);
+
+    const strict = validate({ basics: { name: 'Test', email: 'invalid' } }, 'strict');
+    expect(strict.isValid).toBe(false);
   });
 });
