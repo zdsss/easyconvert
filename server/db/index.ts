@@ -1,5 +1,5 @@
 import { Pool } from 'pg';
-import { memoryDb } from './memory';
+import { sqliteDb } from './sqlite';
 
 // 支持 DATABASE_URL 或分开的 DB_* 变量
 const DATABASE_URL = process.env.DATABASE_URL
@@ -18,8 +18,8 @@ if (DATABASE_URL) {
 
   console.log('✓ Using PostgreSQL database');
 } else {
-  console.warn('⚠ DATABASE_URL not set, using in-memory storage');
-  db = memoryDb;
+  console.warn('⚠ DATABASE_URL not set, using SQLite in-memory storage');
+  db = sqliteDb;
 }
 
 export { runMigrations } from './migrate';
