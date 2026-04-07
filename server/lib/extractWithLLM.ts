@@ -7,27 +7,6 @@ import type { ParsingStrategy } from '@shared/parsingStrategy';
 
 export { TimeoutError } from '@shared/types';
 
-class ServerCostTracker {
-  private calls = 0;
-  private tokens = 0;
-
-  record(inputTokens: number, outputTokens: number) {
-    this.calls++;
-    this.tokens += inputTokens + outputTokens;
-  }
-
-  getStats() {
-    const costPerMToken = 0.5;
-    return {
-      calls: this.calls,
-      tokens: this.tokens,
-      estimatedCost: (this.tokens / 1000000) * costPerMToken,
-    };
-  }
-}
-
-const serverCostTracker = new ServerCostTracker();
-
 function isRetryableError(error: any): boolean {
   if (error.name === 'TimeoutError') return true;
   if (error.name === 'AbortError') return true;
@@ -211,9 +190,6 @@ async function extractWithTimeout(text: string, strategy: ParsingStrategy, pdfBa
     }
 
     const data = await response.json();
-    if (data.usage) {
-      serverCostTracker.record(data.usage.prompt_tokens || 0, data.usage.completion_tokens || 0);
-    }
     return JSON.parse(data.choices[0].message.content);
   } catch (error: any) {
     if (error.name === 'AbortError') {

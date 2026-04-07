@@ -31,16 +31,5 @@ export default defineConfig({
       '/api': 'http://localhost:3001',
       '/test-resumes': 'http://localhost:3001'
     }
-  },
-  test: {
-    globals: true,
-    environment: 'jsdom',
-    include: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'server/__tests__/**/*.test.ts'],
-    alias: {
-      '@lib': path.resolve(__dirname, 'src/lib'),
-      '@components': path.resolve(__dirname, 'src/components'),
-      '@pages': path.resolve(__dirname, 'src/pages'),
-      '@shared': path.resolve(__dirname, 'src/lib'),
-    }
   }
 })
