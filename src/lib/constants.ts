@@ -4,4 +4,4 @@ export {
   CACHE_CONFIG,
   CONCURRENCY_CONFIG,
   BATCH_CONFIG,
-} from '../../shared/constants';
+} from '@shared/constants';

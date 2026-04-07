@@ -15,8 +15,8 @@ import { classifyContent } from '@shared/classifiers/contentClassifier';
 import { validateWithZod } from '@shared/validation/engine';
 import { runWithLimit } from '@shared/concurrency';
 
-import { runPipeline } from '../../shared/resumeProcessor';
-import type { PipelineAdapter, PipelineResult } from '../../shared/resumeProcessor';
+import { runPipeline } from '@shared/resumeProcessor';
+import type { PipelineAdapter, PipelineResult } from '@shared/resumeProcessor';
 
 export interface ServerProcessOptions {
   enableCache?: boolean;

@@ -1,4 +1,4 @@
-import { parseDocxFromArrayBuffer } from '../../shared/parseDocx';
+import { parseDocxFromArrayBuffer } from '@shared/parseDocx';
 
 export async function parseDocx(buffer: Buffer): Promise<string> {
   const arrayBuffer = buffer.buffer.slice(

@@ -11,8 +11,8 @@ import { validateWithZod } from '@lib/validation/engine';
 import { logger } from '@lib/logger';
 import { cacheAnalyzer } from '@lib/cacheAnalyzer';
 import type { StageName } from '@lib/processTracer';
-import { runPipeline } from '../../../shared/resumeProcessor';
-import type { PipelineAdapter, PipelineResult } from '../../../shared/resumeProcessor';
+import { runPipeline } from '@shared/resumeProcessor';
+import type { PipelineAdapter, PipelineResult } from '@shared/resumeProcessor';
 
 export interface ProcessOptions {
   enableCache?: boolean;

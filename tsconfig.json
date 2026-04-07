@@ -21,9 +21,9 @@
       "@lib/*": ["src/lib/*"],
       "@components/*": ["src/components/*"],
       "@pages/*": ["src/pages/*"],
-      "@shared/*": ["src/lib/*"]
+      "@shared/*": ["shared/*"]
     }
   },
-  "include": ["src"],
+  "include": ["src", "shared"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

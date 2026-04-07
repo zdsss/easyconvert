@@ -1,1 +1,1 @@
-export { classifyResume } from '../../../shared/classifiers/index';
+export { classifyResume } from '@shared/classifiers/index';

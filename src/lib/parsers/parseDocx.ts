@@ -1,4 +1,4 @@
-import { parseDocxFromArrayBuffer } from '../../../shared/parseDocx';
+import { parseDocxFromArrayBuffer } from '@shared/parseDocx';
 
 export async function parseDocx(file: File): Promise<string> {
   try {

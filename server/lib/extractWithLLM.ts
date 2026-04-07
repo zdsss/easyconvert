@@ -10,8 +10,8 @@ import {
   isRetryableError,
   getRetryDelay,
   resumeSchema,
-} from '../../shared/extractWithLLM';
-import type { ExtractEnvConfig } from '../../shared/extractWithLLM';
+} from '@shared/extractWithLLM';
+import type { ExtractEnvConfig } from '@shared/extractWithLLM';
 
 export { TimeoutError };
 export { isRetryableError, getRetryDelay, resumeSchema };

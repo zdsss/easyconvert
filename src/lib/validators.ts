@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { ValidationResult } from '../../shared/types';
+import type { ValidationResult } from '@shared/types';
 
 const emailSchema = z.string().email();
 const phoneSchema = z.string().regex(/^[\d\s\-+()]+$/);

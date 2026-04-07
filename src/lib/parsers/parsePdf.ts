@@ -1,4 +1,4 @@
-import { configurePdfWorker, extractTextFromPdf } from '../../../shared/parsePdf';
+import { configurePdfWorker, extractTextFromPdf } from '@shared/parsePdf';
 
 configurePdfWorker({
   workerSrc: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js',

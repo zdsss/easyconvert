@@ -11,10 +11,10 @@ export {
   type ValidationResult,
   TimeoutError,
   ValidationError,
-} from '../../shared/types';
+} from '@shared/types';
 
 // Import for local use in frontend-only types below
-import type { Resume } from '../../shared/types';
+import type { Resume } from '@shared/types';
 
 // ---------------------------------------------------------------------------
 // Frontend-only types (not shared with server)

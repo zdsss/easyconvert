@@ -1,6 +1,6 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { configurePdfWorker, extractTextFromPdf } from '../../shared/parsePdf';
+import { configurePdfWorker, extractTextFromPdf } from '@shared/parsePdf';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

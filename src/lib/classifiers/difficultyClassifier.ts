@@ -1,1 +1,1 @@
-export { classifyDifficulty } from '../../../shared/classifiers/difficultyClassifier';
+export { classifyDifficulty } from '@shared/classifiers/difficultyClassifier';

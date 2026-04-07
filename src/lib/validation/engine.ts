@@ -1,1 +1,1 @@
-export { validateWithZod, type ValidationResult } from '../../../shared/validation/engine';
+export { validateWithZod, type ValidationResult } from '@shared/validation/engine';

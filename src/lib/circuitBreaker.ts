@@ -1,1 +1,1 @@
-export { circuitBreaker } from '../../shared/circuitBreaker';
+export { circuitBreaker } from '@shared/circuitBreaker';
