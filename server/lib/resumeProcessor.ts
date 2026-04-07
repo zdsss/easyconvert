@@ -9,12 +9,14 @@ import type { ServerFileInput } from './types';
 import type { Resume, CacheData } from '@shared/types';
 import type { StageName } from '@shared/processTracer';
 
-// 直接复用同构模块
 import { classifyResume } from '@shared/classifiers';
 import { getStrategy } from '@shared/parsingStrategy';
 import { classifyContent } from '@shared/classifiers/contentClassifier';
 import { validateWithZod } from '@shared/validation/engine';
 import { runWithLimit } from '@shared/concurrency';
+
+import { runPipeline } from '../../shared/resumeProcessor';
+import type { PipelineAdapter, PipelineResult } from '../../shared/resumeProcessor';
 
 export interface ServerProcessOptions {
   enableCache?: boolean;
@@ -36,6 +38,29 @@ export interface ServerProcessResult {
   existingId?: string;
 }
 
+function createServerAdapter(file: ServerFileInput): PipelineAdapter {
+  return {
+    hashFile: () => hashFile(file.buffer),
+    getCached: (hash) => getCached(hash),
+    setCache: (hash, data) => setCache(hash, data as CacheData),
+    parseText: (fileName) => fileName.endsWith('.pdf') ? parsePdf(file.buffer) : parseDocx(file.buffer),
+    extractResume: (text, strategy) => extractResume(text, strategy),
+    classifyResume: (text) => classifyResume(text),
+    getStrategy: (classification) => getStrategy(classification),
+    classifyContent: (resume, text) => classifyContent(resume, text),
+    validateWithZod: (resume, level) => validateWithZod(resume, level),
+    runWithLimit: (fn) => runWithLimit(fn),
+    onResumeExtracted: (resume) => {
+      const rHash = hashResume(resume);
+      const existingId = checkDuplicate(rHash);
+      if (existingId) return { duplicate: true, existingId };
+      registerResult(rHash, hashFile(file.buffer));
+      return null;
+    },
+    log: (level, msg, meta) => (serverLogger as any)[level]?.(msg, meta),
+  };
+}
+
 /**
  * 服务端简历处理管线 — 9 阶段编排器
  * 替代前端 resumeProcessor，使用 Buffer 输入
@@ -44,101 +69,7 @@ export async function processResume(
   file: ServerFileInput,
   options: ServerProcessOptions = {}
 ): Promise<ServerProcessResult> {
-  const { enableCache = true, enableClassification = true, enableValidation = true, onStageComplete } = options;
-
-  const startTime = Date.now();
-  onStageComplete?.('file_upload');
-
-  // Stage 1: Hash
-  const hash = hashFile(file.buffer);
-  serverLogger.debug('File hash computed', { hash, fileName: file.name, size: file.size });
-
-  // Stage 2: Cache check
-  if (enableCache) {
-    const cacheStart = Date.now();
-    const cached = await getCached(hash);
-    const cacheTime = Date.now() - cacheStart;
-
-    if (cached) {
-      serverLogger.debug('Cache lookup', { result: 'HIT', hash, time: cacheTime });
-      onStageComplete?.('file_parse');
-      onStageComplete?.('difficulty_classify');
-      onStageComplete?.('strategy_select');
-      onStageComplete?.('llm_extract');
-      onStageComplete?.('content_classify');
-      onStageComplete?.('validation');
-      onStageComplete?.('cache_store');
-      return {
-        resume: cached.resume,
-        classification: cached.contentClass,
-        fromCache: true,
-        hash,
-      };
-    }
-    serverLogger.debug('Cache lookup', { result: 'MISS', hash, time: cacheTime });
-  }
-
-  // Stage 3: Parse file
-  onStageComplete?.('file_parse');
-  const text = file.name.endsWith('.pdf')
-    ? await parsePdf(file.buffer)
-    : await parseDocx(file.buffer);
-
-  // Stage 4: Classify difficulty
-  onStageComplete?.('difficulty_classify');
-  const difficultyClass = classifyResume(text);
-
-  // Stage 5: Select strategy
-  onStageComplete?.('strategy_select');
-  const strategy = getStrategy(difficultyClass);
-
-  // Stage 6: Extract with LLM
-  onStageComplete?.('llm_extract');
-  const resume = await runWithLimit(() => extractResume(text, strategy));
-
-  // Dedup check
-  const resumeHash = hashResume(resume);
-  const existingId = checkDuplicate(resumeHash);
-  if (existingId) {
-    return { resume, fromCache: false, hash, duplicate: true, existingId };
-  }
-  registerResult(resumeHash, hash);
-
-  // Stage 7: Classify content
-  let classification;
-  if (enableClassification) {
-    onStageComplete?.('content_classify');
-    classification = classifyContent(resume, text);
-  }
-
-  // Stage 8: Validate
-  let validation;
-  if (enableValidation) {
-    onStageComplete?.('validation');
-    validation = validateWithZod(resume, strategy.validationLevel);
-  }
-
-  // Stage 9: Cache store
-  if (enableCache && (!enableValidation || validation?.isValid)) {
-    onStageComplete?.('cache_store');
-    const cacheData: CacheData = { resume, contentClass: classification, timestamp: Date.now() };
-    await setCache(hash, cacheData);
-  }
-
-  serverLogger.info('Resume processed', {
-    fileName: file.name,
-    hash,
-    difficulty: difficultyClass.difficulty,
-    time: Date.now() - startTime,
-  });
-
-  return {
-    resume,
-    classification,
-    difficultyClass: difficultyClass.difficulty,
-    fromCache: false,
-    hash,
-    validation,
-  };
+  const adapter = createServerAdapter(file);
+  const result = await runPipeline(adapter, file.name, options);
+  return result;
 }
-

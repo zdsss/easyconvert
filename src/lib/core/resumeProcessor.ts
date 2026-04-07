@@ -10,8 +10,9 @@ import { recordSuccess } from '@lib/metrics';
 import { validateWithZod } from '@lib/validation/engine';
 import { logger } from '@lib/logger';
 import { cacheAnalyzer } from '@lib/cacheAnalyzer';
-import type { Resume } from '@lib/types';
 import type { StageName } from '@lib/processTracer';
+import { runPipeline } from '../../../shared/resumeProcessor';
+import type { PipelineAdapter, PipelineResult } from '../../../shared/resumeProcessor';
 
 export interface ProcessOptions {
   enableCache?: boolean;
@@ -21,7 +22,7 @@ export interface ProcessOptions {
 }
 
 export interface ProcessResult {
-  resume: Resume;
+  resume: PipelineResult['resume'];
   classification?: any;
   difficultyClass?: string;
   fromCache: boolean;
@@ -29,6 +30,25 @@ export interface ProcessResult {
   validation?: any;
   attempts?: number;
   finalStrategy?: string;
+}
+
+function createFrontendAdapter(file: File): PipelineAdapter {
+  return {
+    hashFile: () => hashFile(file),
+    getCached: (hash) => getCached(hash),
+    setCache: (hash, data) => setCache(hash, data),
+    parseText: (fileName) => fileName.endsWith('.pdf') ? parsePdf(file) : parseDocx(file),
+    extractResume: (text, strategy) => extractResume(text, strategy),
+    classifyResume: (text) => classifyResume(text),
+    getStrategy: (classification) => getStrategy(classification),
+    classifyContent: (resume, text) => classifyContent(resume, text),
+    validateWithZod: (resume, level) => validateWithZod(resume, level),
+    runWithLimit: (fn) => runWithLimit(fn),
+    onCacheHit: (cacheTime) => cacheAnalyzer.recordHit(cacheTime),
+    onCacheMiss: (cacheTime) => cacheAnalyzer.recordMiss(cacheTime),
+    onComplete: (time, fromCache) => recordSuccess(time, fromCache),
+    log: (level, msg, meta) => (logger as any)[level]?.(msg, meta),
+  };
 }
 
 /**
@@ -47,85 +67,7 @@ export async function processResume(
   file: File,
   options: ProcessOptions = {}
 ): Promise<ProcessResult> {
-  const { enableCache = true, enableClassification = true, enableValidation = true, onStageComplete } = options;
-
-  const startTime = Date.now();
-  onStageComplete?.('file_upload');
-  const hash = await hashFile(file);
-  logger.debug('File hash computed', { hash, fileName: file.name, size: file.size });
-
-  // Check cache
-  if (enableCache) {
-    const cacheStart = Date.now();
-    const cached = await getCached(hash);
-    const cacheTime = Date.now() - cacheStart;
-
-    if (cached) {
-      cacheAnalyzer.recordHit(cacheTime);
-      logger.debug('Cache lookup', { result: 'HIT', hash, time: cacheTime });
-      onStageComplete?.('file_parse');
-      onStageComplete?.('difficulty_classify');
-      onStageComplete?.('strategy_select');
-      onStageComplete?.('llm_extract');
-      onStageComplete?.('content_classify');
-      onStageComplete?.('validation');
-      onStageComplete?.('cache_store');
-      recordSuccess(Date.now() - startTime, true);
-      return {
-        resume: cached.resume,
-        classification: cached.contentClass,
-        fromCache: true,
-        hash
-      };
-    }
-    cacheAnalyzer.recordMiss(cacheTime);
-    logger.debug('Cache lookup', { result: 'MISS', hash, time: cacheTime });
-  }
-
-  // Parse file
-  onStageComplete?.('file_parse');
-  const text = file.name.endsWith('.pdf') ? await parsePdf(file) : await parseDocx(file);
-
-  // Classify difficulty
-  onStageComplete?.('difficulty_classify');
-  const difficultyClass = classifyResume(text);
-
-  // Select strategy
-  onStageComplete?.('strategy_select');
-  const strategy = getStrategy(difficultyClass);
-
-  // Extract with LLM
-  onStageComplete?.('llm_extract');
-  const resume = await runWithLimit(() => extractResume(text, strategy));
-
-  // Classify content
-  let classification;
-  if (enableClassification) {
-    onStageComplete?.('content_classify');
-    classification = classifyContent(resume, text);
-  }
-
-  // Validate
-  let validation;
-  if (enableValidation) {
-    onStageComplete?.('validation');
-    validation = validateWithZod(resume, strategy.validationLevel);
-  }
-
-  // Cache if valid
-  if (enableCache && (!enableValidation || validation?.isValid)) {
-    onStageComplete?.('cache_store');
-    await setCache(hash, { resume, contentClass: classification, timestamp: Date.now() });
-  }
-
-  recordSuccess(Date.now() - startTime, false);
-
-  return {
-    resume,
-    classification,
-    difficultyClass: difficultyClass.difficulty,
-    fromCache: false,
-    hash,
-    validation
-  };
+  const adapter = createFrontendAdapter(file);
+  const result = await runPipeline(adapter, file.name, options);
+  return result;
 }

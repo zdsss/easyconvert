@@ -1,12 +1,6 @@
-export type StageName =
-  | 'file_upload'
-  | 'file_parse'
-  | 'difficulty_classify'
-  | 'strategy_select'
-  | 'llm_extract'
-  | 'content_classify'
-  | 'validation'
-  | 'cache_store';
+// Re-export from shared (single source of truth)
+export type { StageName } from '../../shared/types';
+import type { StageName } from '../../shared/types';
 
 export type StageStatus = 'pending' | 'processing' | 'completed' | 'failed';
 

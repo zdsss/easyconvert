@@ -1,22 +1,14 @@
-import * as pdfjsLib from 'pdfjs-dist';
+import { configurePdfWorker, extractTextFromPdf } from '../../../shared/parsePdf';
+
+configurePdfWorker({
+  workerSrc: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js',
+});
 
 export async function parsePdf(file: File): Promise<string> {
-  pdfjsLib.GlobalWorkerOptions.workerSrc =
-    'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
-
   try {
     const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
-
-    let fullText = '';
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const content = await page.getTextContent();
-      fullText += content.items.map((item: any) => item.str).join(' ') + '\n';
-    }
-
-    return fullText;
-  } catch (error) {
+    return await extractTextFromPdf(new Uint8Array(arrayBuffer));
+  } catch {
     throw new Error('PDF文件格式错误或已损坏');
   }
 }
