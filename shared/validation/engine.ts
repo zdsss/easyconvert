@@ -15,7 +15,7 @@ export function validateWithZod(data: any, level: 'basic' | 'standard' | 'strict
   return { isValid: level === 'basic' ? errors.length < 2 : false, errors, warnings: [], completeness: 0 };
 }
 
-function calculateCompleteness(data: any): number {
+export function calculateCompleteness(data: any): number {
   let score = 0;
   if (data.basics?.name) score += 30;
   if (data.basics?.email || data.basics?.phone) score += 20;
