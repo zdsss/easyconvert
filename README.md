@@ -97,7 +97,7 @@ DB_PASSWORD=postgres
 ```
 easyconvert/
 ├── src/                            # 前端源码
-│   ├── components/                 # UI 组件（30+ 组件）
+│   ├── components/                 # UI 组件（21 组件 + 10 基础 UI）
 │   │   └── ui/                     # 基础 UI（Toast, Drawer, Icon, Skeleton 等）
 │   ├── pages/                      # 14 个页面
 │   ├── lib/
@@ -119,12 +119,10 @@ easyconvert/
 │
 ├── server/                         # 后端源码
 │   ├── routes/                     # 10 个 API 路由模块
-│   ├── lib/                        # 后端业务逻辑
-│   │   └── llm/                    # LLM 适配器（Claude/OpenAI/DeepSeek/Qwen）
+│   ├── lib/                        # 后端业务逻辑（14 模块）
 │   ├── db/                         # PostgreSQL + 9 个迁移 + 内存存储
 │   ├── middleware/                  # auth / rateLimit / requestLogger
-│   ├── __tests__/                  # 后端测试（10 个文件）
-│   └── docs/openapi.yaml           # Swagger/OpenAPI 定义
+│   └── __tests__/                  # 后端测试（10 个文件）
 │
 ├── scripts/                        # Python 辅助脚本（3 个）
 ├── test-resumes/                   # 测试简历（3768 真实 + 18 合成）
@@ -159,19 +157,19 @@ easyconvert/
 | `/api/reports` | 评测报告 |
 | `/api/alerts/webhook` | 告警 Webhook 转发 |
 
-完整定义见 `server/docs/openapi.yaml`，启动后访问 `/api/docs` 查看 Swagger UI。
+完整定义见 `/api/docs`（swagger-jsdoc 自动生成）。
 
 ## 测试
 
 ```bash
-# 全部测试（26 个文件）
+# 全部测试（24 个文件，119 tests）
 npm test
 
 # 带覆盖率
 npm run test:coverage
 ```
 
-测试分布：前端 16 个（解析器、分类器、缓存、验证、导出等）+ 后端 10 个（路由、认证、限流、队列等）。
+测试分布：前端 14 个（解析器、分类器、缓存、验证、导出等）+ 后端 10 个（路由、认证、限流、队列等）。
 
 ## 辅助脚本
 
@@ -193,19 +191,20 @@ npm run test:coverage
 
 ## 已知技术债
 
-- 前后端 `extractWithLLM` / `resumeProcessor` / `parsePdf` / `parseDocx` 大量重复代码，应抽取共享核心模块
-- `server/` 有 17 处直接 import `../../src/` 前端模块，跨越架构边界（Vite `import.meta.env` 在 Node 下不确定）
-- `server/db/memory.ts` 用字符串匹配模拟 SQL，544 行条件分支，维护成本高
-- `validators.ts` 和 `validation/engine.ts` 职责重叠（手动校验 vs Zod schema）
-- `resolveTenantId` 在 `keys.ts` 和 `usage.ts` 中重复定义
-- 两套成本追踪实现（前端 `monitoring/cost.ts` 有定价表，后端用固定 $0.5/M）
+- 前后端 `extractWithLLM` / `resumeProcessor` / `parsePdf` / `parseDocx` / `logger` 大量重复代码（85-90%），应抽取共享核心模块，各端注入平台差异（env 读取、File vs Buffer、日志格式）
+- `server/db/memory.ts` 用字符串匹配模拟 SQL，544 行条件分支，维护成本高，应换 better-sqlite3 或类似方案
+- `validators.ts` 中的手动校验函数在生产代码中未使用（仅 Zod 的 `validateWithZod` 被调用），类型定义仍被依赖，应将类型迁至 `types.ts` 后删除冗余校验函数
+- 两套成本追踪实现（前端 `monitoring/cost.ts` 有按模型定价表，后端用固定 $0.5/M），且 `reportGenerator.ts` 有第三套估算逻辑
+- `resumeSchema` JSON 对象在 `extractWithLLM.ts`（前后端各一份）和 `validation/schemas.ts`（Zod 版）中三处定义，且 Zod 版用 `school` 而 JSON 版用 `institution`，存在字段名不一致
+- `server/routes/tenants.ts` 查询 `quota_per_minute` 列，但无迁移创建该列，PostgreSQL 下会运行时报错（内存存储下静默通过）
+- `test-resumes/phase3-real-samples/`（3768 文件，~2.5GB）直接 tracked in git，应迁移至 Git LFS 或外部存储
 
 ## 技术栈
 
 - **前端**: React 18 + TypeScript + Vite + Tailwind CSS + Zustand
 - **后端**: Express.js + PostgreSQL + tsx
-- **LLM**: Qwen / DeepSeek / Claude / OpenAI（适配器模式）
+- **LLM**: Qwen / DeepSeek / Claude / OpenAI（inline provider config）
 - **解析**: pdfjs-dist, mammoth
 - **验证**: Zod
-- **测试**: Vitest（26 files）
+- **测试**: Vitest（24 files, 119 tests）
 - **i18n**: 中文 / English

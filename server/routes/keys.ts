@@ -1,27 +1,10 @@
 import { Router } from 'express';
 import { createHash, randomBytes } from 'crypto';
 import db from '../db';
+import { resolveTenantId } from '../lib/tenant';
 import type { AuthenticatedRequest } from '../types';
 
 const router = Router();
-
-/**
- * 根据 tenantId 参数查找真实 UUID
- * 支持直接传 UUID 或 slug（如 "default"）
- */
-async function resolveTenantId(tenantId: string): Promise<string | null> {
-  // 如果是有效 UUID 格式，直接返回
-  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantId)) {
-    return tenantId;
-  }
-  // 否则按 slug 查找
-  try {
-    const result = await db.query('SELECT id FROM tenants WHERE slug = $1', [tenantId]);
-    return result.rows[0]?.id || null;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * 确保 default 租户存在

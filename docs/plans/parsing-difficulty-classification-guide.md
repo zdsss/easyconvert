@@ -39,5 +39,5 @@
 
 1. 运行分类脚本: `python scripts/reclassify_by_parsing_difficulty.py`
 2. 选择测试集: `python scripts/select_stratified_test_set.py`
-3. 执行测试: `python scripts/test_stratified_set.py`
-4. 人工标注: `python scripts/manual_annotation.py`
+3. 通过评测系统执行测试（`/evaluation` 页面）
+4. 通过标注系统进行人工标注（`/evaluation/annotations` 页面）

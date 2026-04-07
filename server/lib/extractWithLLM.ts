@@ -26,7 +26,7 @@ class ServerCostTracker {
   }
 }
 
-export const serverCostTracker = new ServerCostTracker();
+const serverCostTracker = new ServerCostTracker();
 
 function isRetryableError(error: any): boolean {
   if (error.name === 'TimeoutError') return true;

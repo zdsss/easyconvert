@@ -65,7 +65,7 @@ server/
 
 src/
   ├── lib/
-  │   ├── evaluationStore.ts      # 状态管理
+  │   ├── store/evaluationStore.ts # 状态管理
   │   ├── evaluationProcessor.ts  # 评测处理器
   │   ├── metricsCalculator.ts    # 指标计算
   │   ├── processTracer.ts        # 流程追踪
