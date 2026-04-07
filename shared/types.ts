@@ -105,3 +105,12 @@ export type StageName =
   | 'content_classify'
   | 'validation'
   | 'cache_store';
+
+// --- Validation types ---
+
+export interface ValidationResult {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+  completeness: number;
+}

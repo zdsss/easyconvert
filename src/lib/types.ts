@@ -8,6 +8,7 @@ export {
   type ParsingStrategy,
   type ResumeClassification,
   type StageName,
+  type ValidationResult,
   TimeoutError,
   ValidationError,
 } from '../../shared/types';

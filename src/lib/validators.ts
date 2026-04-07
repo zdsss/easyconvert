@@ -1,14 +1,10 @@
 import { z } from 'zod';
+import type { ValidationResult } from '../../shared/types';
 
 const emailSchema = z.string().email();
 const phoneSchema = z.string().regex(/^[\d\s\-+()]+$/);
 
-export interface ValidationResult {
-  isValid: boolean;
-  errors: string[];
-  warnings: string[];
-  completeness: number;
-}
+export type { ValidationResult };
 
 export interface FieldValidation {
   field: string;
