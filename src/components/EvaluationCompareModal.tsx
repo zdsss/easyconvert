@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { evaluationApi } from '@lib/api/evaluationApi';
-import type { EvaluationResult } from '@lib/types';
+import { aggregateFieldMetrics } from '@lib/metricsCalculator';
 import Icon from '@components/ui/Icon';
 
 interface Props {
@@ -12,24 +12,6 @@ interface FieldAvg {
   field: string;
   avg1: number;
   avg2: number;
-}
-
-function aggregateFieldMetrics(results: EvaluationResult[]): Record<string, number[]> {
-  const map: Record<string, number[]> = {};
-  for (const r of results) {
-    const fm = r.metrics?.fieldMetrics;
-    if (!fm) continue;
-    for (const [field, val] of Object.entries(fm)) {
-      if (!map[field]) map[field] = [];
-      map[field].push(Number(val) || 0);
-    }
-  }
-  return map;
-}
-
-function avg(nums: number[]): number {
-  if (nums.length === 0) return 0;
-  return nums.reduce((s, n) => s + n, 0) / nums.length;
 }
 
 export default function EvaluationCompareModal({ taskIds, onClose }: Props) {
@@ -55,8 +37,8 @@ export default function EvaluationCompareModal({ taskIds, onClose }: Props) {
 
         const fieldRows: FieldAvg[] = Array.from(allFields).sort().map(field => ({
           field,
-          avg1: avg(map1[field] || []),
-          avg2: avg(map2[field] || []),
+          avg1: map1[field] ? map1[field].correct / map1[field].total * 100 : 0,
+          avg2: map2[field] ? map2[field].correct / map2[field].total * 100 : 0,
         }));
         setRows(fieldRows);
       } catch {

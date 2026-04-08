@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { useEvaluationStore, type EvaluationTask } from '@lib/store/evaluationStore';
+import { useEvaluationStore } from '@lib/store/evaluationStore';
 import { evaluationApi } from '@lib/api/evaluationApi';
 import { logger } from '@lib/logger';
 import { processWithEvaluation } from '@lib/evaluationProcessor';
@@ -10,36 +10,9 @@ import ComparisonView from '@components/ComparisonView';
 import MetricCard from '@components/ui/MetricCard';
 import Pagination from '@components/ui/Pagination';
 import Icon from '@components/ui/Icon';
-import type { TaskResponse, EvaluationResult, Resume } from '@lib/types';
-
-function adaptTaskResponse(task: TaskResponse): EvaluationTask {
-  return {
-    ...task,
-    type: (task.type as 'single' | 'batch') || 'single',
-    config: task.config || { enableFieldLevel: false, enableClassification: false, enableProcessTrace: false, accuracyMethod: 'exact' as const },
-    stats: task.stats || { totalFiles: 0, processedFiles: 0, successCount: 0, failureCount: 0 },
-    createdAt: new Date(task.createdAt),
-    updatedAt: new Date(task.updatedAt || task.createdAt)
-  };
-}
-
-function LanguageBadge({ lang }: { lang?: string }) {
-  if (!lang || lang === 'unknown') return null;
-  const map: Record<string, { label: string; cls: string }> = {
-    zh: { label: 'ZH', cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
-    en: { label: 'EN', cls: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
-    ja: { label: 'JA', cls: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
-  };
-  const { label, cls } = map[lang] ?? { label: lang.toUpperCase(), cls: 'bg-surface-secondary text-text-secondary' };
-  return <span className={`px-1.5 py-0.5 rounded text-xs font-mono font-semibold ${cls}`}>{label}</span>;
-}
-
-const STATUS_MAP: Record<string, { label: string; class: string }> = {
-  completed: { label: '已完成', class: 'badge-success' },
-  processing: { label: '处理中', class: 'badge-info' },
-  failed: { label: '失败', class: 'badge-error' },
-  pending: { label: '待评测', class: 'badge-neutral' },
-};
+import type { EvaluationResult, Resume } from '@lib/types';
+import { adaptTaskResponse, STATUS_MAP } from '@lib/utils';
+import LanguageBadge from '@components/ui/LanguageBadge';
 
 const TABS = [
   { key: 'results', label: '结果列表', icon: 'list' },

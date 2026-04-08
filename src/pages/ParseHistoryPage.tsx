@@ -7,28 +7,11 @@ import EmptyState from '@components/ui/EmptyState';
 import Pagination from '@components/ui/Pagination';
 import ConfirmDialog from '@components/ui/ConfirmDialog';
 import { SkeletonCard } from '@components/ui/Skeleton';
+import LanguageBadge from '@components/ui/LanguageBadge';
 
 const PAGE_SIZE = 20;
 
-const STATUS_MAP: Record<string, { label: string; class: string; dotClass: string }> = {
-  completed: { label: '成功', class: 'badge-success', dotClass: 'bg-status-success' },
-  failed: { label: '失败', class: 'badge-error', dotClass: 'bg-status-error' },
-  processing: { label: '处理中', class: 'badge-info', dotClass: 'bg-status-info animate-pulse' },
-  pending: { label: '待处理', class: 'badge-neutral', dotClass: 'bg-gray-400' },
-};
-
-function LanguageBadge({ lang }: { lang?: string }) {
-  if (!lang || lang === 'unknown') return null;
-  const map: Record<string, { label: string; cls: string }> = {
-    zh: { label: 'ZH', cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
-    en: { label: 'EN', cls: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
-    ja: { label: 'JA', cls: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
-  };
-  const { label, cls } = map[lang] ?? { label: lang.toUpperCase(), cls: 'bg-surface-secondary text-text-secondary' };
-  return <span className={`px-1.5 py-0.5 rounded text-xs font-mono font-semibold ${cls}`}>{label}</span>;
-}
-
-import { formatSize } from '@lib/utils';
+import { formatSize, STATUS_MAP } from '@lib/utils';
 import type { Resume } from '@lib/types';
 
 function formatTime(ms: number | null): string {

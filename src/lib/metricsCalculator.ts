@@ -173,3 +173,24 @@ export function calculateMetrics(
     completeness: calculateCompleteness(expected, actual)
   };
 }
+
+/**
+ * Aggregate field accuracy from evaluation results.
+ * Handles both object and string-encoded metrics.
+ */
+export function aggregateFieldMetrics(results: Array<{ metrics?: unknown }>): Record<string, { total: number; correct: number }> {
+  const map: Record<string, { total: number; correct: number }> = {};
+  for (const r of results) {
+    const raw = r.metrics;
+    const metrics = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    if (!metrics || typeof metrics !== 'object' || !('fieldAccuracy' in metrics)) continue;
+    const fieldAccuracy = (metrics as Record<string, unknown>).fieldAccuracy;
+    if (!fieldAccuracy || typeof fieldAccuracy !== 'object') continue;
+    for (const [field, acc] of Object.entries(fieldAccuracy)) {
+      if (!map[field]) map[field] = { total: 0, correct: 0 };
+      map[field].total += 1;
+      map[field].correct += Number(acc) || 0;
+    }
+  }
+  return map;
+}

@@ -1,32 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useEvaluationStore, type EvaluationTask } from '@lib/store/evaluationStore';
+import { useEvaluationStore } from '@lib/store/evaluationStore';
 import { evaluationApi } from '@lib/api/evaluationApi';
 import { logger } from '@lib/logger';
-import type { TaskResponse } from '@lib/types';
+import { adaptTaskResponse, STATUS_MAP } from '@lib/utils';
 import Icon from '@components/ui/Icon';
 import EmptyState from '@components/ui/EmptyState';
 import Pagination from '@components/ui/Pagination';
 import { SkeletonCard } from '@components/ui/Skeleton';
 import EvaluationCompareModal from '@components/EvaluationCompareModal';
-
-function adaptTaskResponse(task: TaskResponse): EvaluationTask {
-  return {
-    ...task,
-    type: (task.type as 'single' | 'batch') || 'single',
-    config: task.config || { enableFieldLevel: false, enableClassification: false, enableProcessTrace: false, accuracyMethod: 'exact' as const },
-    stats: task.stats || { totalFiles: 0, processedFiles: 0, successCount: 0, failureCount: 0 },
-    createdAt: new Date(task.createdAt),
-    updatedAt: new Date(task.updatedAt || task.createdAt)
-  };
-}
-
-const STATUS_MAP: Record<string, { label: string; class: string; dotClass: string }> = {
-  completed: { label: '已完成', class: 'badge-success', dotClass: 'bg-status-success' },
-  processing: { label: '处理中', class: 'badge-info', dotClass: 'bg-status-info animate-pulse' },
-  failed: { label: '失败', class: 'badge-error', dotClass: 'bg-status-error' },
-  pending: { label: '待处理', class: 'badge-neutral', dotClass: 'bg-gray-400' },
-};
 
 const PAGE_SIZE = 8;
 

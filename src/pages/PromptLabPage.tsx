@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { evaluationApi } from '@lib/api/evaluationApi';
 import { analyzeWeakFields, type FieldMetric } from '@lib/promptOptimizer';
+import { aggregateFieldMetrics } from '@lib/metricsCalculator';
 import { getPrompt } from '@shared/prompts';
 import Icon from '@components/ui/Icon';
 
@@ -47,7 +48,7 @@ export default function PromptLabPage() {
       setExperiments(Array.isArray(expList) ? expList : []);
 
       // Aggregate field metrics from completed tasks with results
-      const metrics = await aggregateFieldMetrics(allTasks.filter((t: { status: string }) => t.status === 'completed'));
+      const metrics = await aggregateFieldMetricsFromTasks(allTasks.filter((t: { status: string }) => t.status === 'completed'));
       setFieldMetrics(metrics);
       setWeakFields(analyzeWeakFields(metrics));
     } catch {
@@ -57,20 +58,17 @@ export default function PromptLabPage() {
     }
   }
 
-  async function aggregateFieldMetrics(completedTasks: { id: string }[]): Promise<FieldMetric[]> {
+  async function aggregateFieldMetricsFromTasks(completedTasks: { id: string }[]): Promise<FieldMetric[]> {
     const fieldMap: Record<string, { total: number; correct: number }> = {};
     for (const task of completedTasks.slice(0, 10)) {
       try {
         const results = await evaluationApi.getResults(task.id);
         if (!Array.isArray(results)) continue;
-        for (const r of results) {
-          const metrics = typeof r.metrics === 'string' ? JSON.parse(r.metrics) : r.metrics;
-          if (!metrics?.fieldAccuracy) continue;
-          for (const [field, acc] of Object.entries(metrics.fieldAccuracy)) {
-            if (!fieldMap[field]) fieldMap[field] = { total: 0, correct: 0 };
-            fieldMap[field].total += 1;
-            fieldMap[field].correct += Number(acc) || 0;
-          }
+        const taskMap = aggregateFieldMetrics(results as Array<{ metrics?: unknown }>);
+        for (const [field, { total, correct }] of Object.entries(taskMap)) {
+          if (!fieldMap[field]) fieldMap[field] = { total: 0, correct: 0 };
+          fieldMap[field].total += total;
+          fieldMap[field].correct += correct;
         }
       } catch {
         // skip
@@ -132,18 +130,8 @@ export default function PromptLabPage() {
   }
 
   function buildFieldAccMap(results: unknown[]): Record<string, number> {
-    const map: Record<string, { total: number; correct: number }> = {};
     if (!Array.isArray(results)) return {};
-    for (const r of results) {
-      const rec = r as Record<string, unknown>;
-      const metrics = typeof rec.metrics === 'string' ? JSON.parse(rec.metrics) : rec.metrics;
-      if (!metrics?.fieldAccuracy) continue;
-      for (const [field, acc] of Object.entries(metrics.fieldAccuracy)) {
-        if (!map[field]) map[field] = { total: 0, correct: 0 };
-        map[field].total += 1;
-        map[field].correct += Number(acc) || 0;
-      }
-    }
+    const map = aggregateFieldMetrics(results as Array<{ metrics?: unknown }>);
     return Object.fromEntries(
       Object.entries(map).map(([f, { total, correct }]) => [f, total > 0 ? correct / total : 0])
     );
