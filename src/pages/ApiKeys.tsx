@@ -27,7 +27,7 @@ export default function ApiKeys() {
       setShowCreate(false);
       setShowKeyModal(key.key || null);
       setCreateForm({ name: '', scopes: ['parse'], rateLimit: 100, expiresAt: '' });
-    } catch (e) {
+    } catch {
       // error handled by store
     } finally {
       setCreating(false);

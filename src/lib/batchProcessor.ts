@@ -95,7 +95,7 @@ export async function processBatch(
       })
     );
 
-    results.push(...batchResults.sort((a, b) => a.idx - b.idx).map(({ idx, ...rest }) => rest));
+    results.push(...batchResults.sort((a, b) => a.idx - b.idx).map(({ idx: _idx, ...rest }) => rest));
     adaptiveConcurrency.adjust();
     onProgress?.(Math.min(i + BATCH_SIZE, files.length), files.length);
 

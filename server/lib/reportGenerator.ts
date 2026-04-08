@@ -1,5 +1,4 @@
 import db from '../db';
-import { serverLogger } from './logger';
 import { calculateCost, DEFAULT_MODEL } from '@shared/pricing';
 import { serverCostTracker } from './extractWithLLM';
 

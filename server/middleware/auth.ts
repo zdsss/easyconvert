@@ -83,7 +83,7 @@ export async function authMiddleware(
     db.query('UPDATE api_keys SET last_used_at = NOW() WHERE id = $1', [key.id]).catch(() => {});
 
     next();
-  } catch (error) {
+  } catch {
     res.status(500).json({ error: 'Authentication service error' });
   }
 }

@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createHash } from 'crypto';
 import type { Request, Response, NextFunction } from 'express';
 
 // Mock db

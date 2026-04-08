@@ -50,7 +50,7 @@ export default [
       'react': reactPlugin
     },
     rules: {
-      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-explicit-any': 'error',
       'no-console': ['warn', { allow: ['warn', 'error'] }],
       'react/react-in-jsx-scope': 'off',
       'no-undef': 'error',
@@ -91,7 +91,7 @@ export default [
       '@typescript-eslint': tsPlugin,
     },
     rules: {
-      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-explicit-any': 'error',
       'no-console': 'off',
       'no-undef': 'error',
       'no-unused-vars': 'off',

@@ -10,9 +10,6 @@ import type { ParsingStrategy } from '@shared/parsingStrategy';
 import { CostTracker } from '@shared/costTracker';
 import {
   extractResume as coreExtractResume,
-  isRetryableError,
-  getRetryDelay,
-  resumeSchema,
 } from '@shared/extractWithLLM';
 import type { ExtractEnvConfig } from '@shared/extractWithLLM';
 

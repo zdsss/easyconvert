@@ -7,7 +7,6 @@ vi.mock('../db', () => ({ default: { query: (...args: unknown[]) => mockQuery(..
 import {
   generateServerReport,
   getAccuracyTrends,
-  getDistribution,
   getCostReport,
 } from '../lib/reportGenerator';
 

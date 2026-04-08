@@ -28,7 +28,7 @@ const router = Router();
  */
 router.get('/', async (req, res) => {
   try {
-    const tenantId = req.query.tenantId || 'default';
+    // TODO: filter by tenantId when multi-tenant usage tracking is implemented
     const days = parseInt(req.query.days as string) || 7;
 
     try {
