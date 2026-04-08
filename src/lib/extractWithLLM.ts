@@ -43,16 +43,17 @@ const envConfig: ExtractEnvConfig = {
   detectLanguage: (text) => detectLanguage(text),
   onResponse: (parsed, data, model, lang) => {
     // Cost tracking
-    if (data.usage) {
-      costTracker.record(model, data.usage.prompt_tokens || 0, data.usage.completion_tokens || 0);
+    const usage = data.usage as { prompt_tokens?: number; completion_tokens?: number } | undefined;
+    if (usage) {
+      costTracker.record(model, usage.prompt_tokens || 0, usage.completion_tokens || 0);
     }
     // Confidence extraction
     const confidenceMap = extractConfidence(parsed as Record<string, unknown>);
     if (Object.keys(confidenceMap).length > 0) {
-      parsed.additional = { ...parsed.additional, _confidence: confidenceMap };
+      parsed.additional = { ...(parsed.additional || {}), _confidence: confidenceMap };
     }
     // Language tag
-    parsed.additional = { ...parsed.additional, language: lang || 'zh' };
+    parsed.additional = { ...(parsed.additional || {}), language: lang || 'zh' };
   },
 };
 

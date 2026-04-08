@@ -15,6 +15,7 @@ export {
 
 // Import for local use in frontend-only types below
 import type { Resume } from '@shared/types';
+import type { ProcessTrace } from '@lib/processTracer';
 
 // ---------------------------------------------------------------------------
 // Frontend-only types (not shared with server)
@@ -67,7 +68,7 @@ export interface EvaluationResult {
     modules?: string[];
     category?: string;
   };
-  processTrace?: { stages: Array<{ name: string; status: string; duration?: number; error?: string }>; totalDuration: number };
+  processTrace?: ProcessTrace;
   metrics: EvaluationMetrics;
   processingTime: number;
   fromCache: boolean;

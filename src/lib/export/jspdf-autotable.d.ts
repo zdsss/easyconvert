@@ -7,9 +7,9 @@ declare module 'jspdf' {
       head?: string[][];
       body?: (string | number)[][];
       theme?: 'striped' | 'grid' | 'plain';
-      headStyles?: { fillColor?: number[]; [key: string]: any };
-      styles?: { fontSize?: number; [key: string]: any };
-      [key: string]: any;
+      headStyles?: { fillColor?: number[]; [key: string]: unknown };
+      styles?: { fontSize?: number; [key: string]: unknown };
+      [key: string]: unknown;
     }): jsPDF;
     lastAutoTable: { finalY: number };
   }

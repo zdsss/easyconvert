@@ -135,7 +135,8 @@ export default function PromptLabPage() {
     const map: Record<string, { total: number; correct: number }> = {};
     if (!Array.isArray(results)) return {};
     for (const r of results) {
-      const metrics = typeof r.metrics === 'string' ? JSON.parse(r.metrics) : r.metrics;
+      const rec = r as Record<string, unknown>;
+      const metrics = typeof rec.metrics === 'string' ? JSON.parse(rec.metrics) : rec.metrics;
       if (!metrics?.fieldAccuracy) continue;
       for (const [field, acc] of Object.entries(metrics.fieldAccuracy)) {
         if (!map[field]) map[field] = { total: 0, correct: 0 };

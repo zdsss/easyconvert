@@ -15,7 +15,7 @@ interface FlywheelCandidate {
 }
 
 /** Parse a row's result JSON and extract confidence/quality/language metadata */
-function extractCandidate(row: any): FlywheelCandidate | null {
+function extractCandidate(row: Record<string, unknown>): FlywheelCandidate | null {
   let parsed = row.result;
   if (typeof parsed === 'string') {
     try { parsed = JSON.parse(parsed); } catch { parsed = null; }
@@ -62,7 +62,7 @@ router.get('/', async (req: Request, res: Response) => {
     );
 
     const candidates = result.rows
-      .map((row: any) => extractCandidate(row))
+      .map((row: Record<string, unknown>) => extractCandidate(row))
       .filter((c): c is FlywheelCandidate => c !== null)
       .filter((c) => c.avgConfidence < threshold)
       .sort((a, b) => a.avgConfidence - b.avgConfidence);
@@ -120,7 +120,7 @@ router.get('/stats', async (_req: Request, res: Response) => {
     );
 
     const allCandidates = result.rows
-      .map((row: any) => extractCandidate(row))
+      .map((row: Record<string, unknown>) => extractCandidate(row))
       .filter((c): c is FlywheelCandidate => c !== null);
 
     const belowThreshold = allCandidates.filter((c) => c.avgConfidence < 0.75);

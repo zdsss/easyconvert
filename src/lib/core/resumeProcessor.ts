@@ -42,7 +42,7 @@ function createFrontendAdapter(file: File): PipelineAdapter {
     extractResume: (text, strategy) => extractResume(text, strategy),
     classifyResume: (text) => classifyResume(text),
     getStrategy: (classification) => getStrategy(classification),
-    classifyContent: (resume, text) => classifyContent(resume, text),
+    classifyContent: (resume, text) => classifyContent(resume as unknown as Record<string, unknown>, text),
     validateWithZod: (resume, level) => validateWithZod(resume, level),
     runWithLimit: (fn) => runWithLimit(fn),
     onCacheHit: (cacheTime) => cacheAnalyzer.recordHit(cacheTime),

@@ -31,7 +31,7 @@ export async function processWithEvaluation(
         onStageComplete: (stage, data) => {
           if (config.enableProcessTrace && stage) {
             tracer.startStage(stage);
-            tracer.completeStage(stage, data);
+            tracer.completeStage(stage, data as Record<string, unknown> | undefined);
           }
         }
       });

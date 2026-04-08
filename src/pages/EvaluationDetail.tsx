@@ -382,7 +382,7 @@ export default function EvaluationDetail() {
                         <td className="px-4 py-3 font-medium text-text-primary">
                           <div className="flex items-center gap-2">
                             {result.fileName}
-                            <LanguageBadge lang={result.parsedResume?.additional?.language} />
+                            <LanguageBadge lang={result.parsedResume?.additional?.language as string | undefined} />
                           </div>
                         </td>
                         <td className="px-4 py-3 font-mono">{result.error ? '-' : `${result.metrics.accuracy.toFixed(1)}%`}</td>
@@ -521,7 +521,7 @@ export default function EvaluationDetail() {
         onClose={() => setSelectedResult(null)}
         onSaveAnnotation={handleSaveAnnotation}
         prefillData={selectedResult?.parsedResume}
-        confidenceData={selectedResult?.parsedResume?.additional?._confidence}
+        confidenceData={selectedResult?.parsedResume?.additional?._confidence as Record<string, number> | undefined}
       />
     </div>
   );

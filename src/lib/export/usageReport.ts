@@ -1,4 +1,13 @@
-export function buildUsageCSV(usage: any, days: number): string {
+interface UsageData {
+  requestsByDay?: Array<{ date: string; count: number }>;
+  requestsByEndpoint?: Array<{ endpoint: string; count: number; avgLatency: number }>;
+  totalRequests?: number;
+  successRate?: number;
+  avgLatency?: number;
+  totalTokens?: number;
+}
+
+export function buildUsageCSV(usage: UsageData, days: number): string {
   const lines: string[] = [];
 
   lines.push('用量统计报表');

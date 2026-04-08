@@ -55,7 +55,7 @@ export default function ReportView() {
         const fieldMap: Record<string, { total: number; count: number }> = {};
         for (const result of resultsRes) {
           if (result.metrics?.fieldMetrics) {
-            for (const [field, data] of Object.entries(result.metrics.fieldMetrics as Record<string, any>)) {
+            for (const [field, data] of Object.entries(result.metrics.fieldMetrics as Record<string, { accuracy?: number }>)) {
               if (!fieldMap[field]) fieldMap[field] = { total: 0, count: 0 };
               fieldMap[field].total += data.accuracy ?? 0;
               fieldMap[field].count += 1;
@@ -69,7 +69,7 @@ export default function ReportView() {
         // Fallback: derive from overall metrics if no field-level data
         if (Object.keys(aggregated).length === 0) {
           const fields = ['basics.name', 'basics.email', 'basics.phone', 'basics.title', 'basics.location', 'work[0].company', 'work[0].position', 'education[0].institution', 'education[0].degree', 'skills'];
-          const avgAccuracy = resultsRes.reduce((s: number, r: any) => s + (r.metrics?.accuracy ?? 0), 0) / resultsRes.length;
+          const avgAccuracy = resultsRes.reduce((s: number, r: { metrics?: { accuracy?: number } }) => s + (r.metrics?.accuracy ?? 0), 0) / resultsRes.length;
           for (const f of fields) {
             aggregated[f] = { accuracy: avgAccuracy, matchType: 'avg' };
           }
