@@ -47,15 +47,15 @@ export async function authMiddleware(
       return;
     }
 
-    if (key.expires_at && new Date(key.expires_at) < new Date()) {
+    if (key.expires_at && new Date(key.expires_at as string) < new Date()) {
       res.status(401).json({ error: 'API key has expired' });
       return;
     }
 
     // 注入认证信息
-    req.tenantId = key.tenant_id;
-    req.apiKeyId = key.id;
-    req.scopes = key.scopes;
+    req.tenantId = key.tenant_id as string;
+    req.apiKeyId = key.id as string;
+    req.scopes = key.scopes as string[];
 
     // 更新 last_used_at（异步，不阻塞请求）
     db.query('UPDATE api_keys SET last_used_at = NOW() WHERE id = $1', [key.id]).catch(() => {});

@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { Resume } from '../types';
 import { FileClassification } from '../classifiers/classifier';
 import { ContentClassification } from '@shared/classifiers/contentClassifier';
-import { ValidationResult } from '../validators';
+import type { ValidationResult } from '@shared/types';
 import { StageName, StageStatus } from '../processTracer';
 
 interface StageInfo {

@@ -1,5 +1,8 @@
 import { Pool } from 'pg';
-import { sqliteDb } from './sqlite';
+import { betterSqliteDb } from './sqlite';
+import { getKysely } from './kysely';
+import type { DB } from './schema';
+import type { Kysely } from 'kysely';
 
 export interface QueryResult<T = Record<string, unknown>> {
   rows: T[];
@@ -7,7 +10,8 @@ export interface QueryResult<T = Record<string, unknown>> {
 }
 
 export interface Database {
-  query<T = Record<string, unknown>>(text: string, params?: unknown[]): Promise<QueryResult<T>>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  query<T = Record<string, any>>(text: string, params?: unknown[]): Promise<QueryResult<T>>;
 }
 
 // 支持 DATABASE_URL 或分开的 DB_* 变量
@@ -22,14 +26,20 @@ if (DATABASE_URL) {
   const pool = new Pool({ connectionString: DATABASE_URL });
 
   db = {
-    query: (text, params) => pool.query(text, params),
+    query: async (text, params) => {
+      const result = await pool.query(text, params);
+      return { rows: result.rows, rowCount: result.rowCount ?? 0 };
+    },
   };
 
   console.log('✓ Using PostgreSQL database');
 } else {
   console.warn('⚠ DATABASE_URL not set, using SQLite in-memory storage');
-  db = sqliteDb;
+  db = betterSqliteDb;
 }
+
+/** Kysely instance — use for new type-safe queries */
+export const ky: Kysely<DB> = getKysely();
 
 export { runMigrations } from './migrate';
 export default db;

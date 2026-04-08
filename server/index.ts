@@ -12,6 +12,7 @@ import { requestLoggerMiddleware } from './middleware/requestLogger';
 import { serverLogger } from './lib/logger';
 import { swaggerSpec } from './lib/swagger';
 import { deliverWebhook } from './lib/webhookDelivery';
+import { errorHandler } from './middleware/errorHandler';
 import evaluationsRouter from './routes/evaluations';
 import annotationsRouter from './routes/annotations';
 import reportsRouter from './routes/reports';
@@ -88,8 +89,8 @@ app.get('/api/health', async (_req, res) => {
   const mem = process.memoryUsage();
   let dbStatus = 'ok';
   try {
-    const { db } = await import('./db/index');
-    if (!db) dbStatus = 'unavailable';
+    const dbModule = await import('./db/index');
+    if (!dbModule.default) dbStatus = 'unavailable';
   } catch {
     dbStatus = 'error';
   }
@@ -109,6 +110,9 @@ app.get('/api/health', async (_req, res) => {
 
 // /api/v1/health alias
 app.get('/api/v1/health', (_req, res) => res.redirect('/api/health'));
+
+// Unified error handler (must be after all routes)
+app.use(errorHandler);
 
 // 启动
 async function start() {
@@ -133,7 +137,7 @@ async function start() {
     process.on('SIGTERM', () => shutdown('SIGTERM'));
     process.on('SIGINT', () => shutdown('SIGINT'));
   } catch (error) {
-    serverLogger.error('Failed to start server:', error);
+    serverLogger.error('Failed to start server:', error instanceof Error ? error : new Error(String(error)));
     process.exit(1);
   }
 }

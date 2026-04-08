@@ -11,7 +11,7 @@ export async function resolveTenantId(tenantId: string): Promise<string | null> 
   }
   try {
     const result = await db.query('SELECT id FROM tenants WHERE slug = $1', [tenantId]);
-    return result.rows[0]?.id || null;
+    return (result.rows[0]?.id as string) || null;
   } catch {
     return null;
   }

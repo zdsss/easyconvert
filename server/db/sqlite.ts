@@ -1,23 +1,21 @@
 /**
- * SQLite in-memory fallback — replaces the old hand-rolled memory.ts
+ * SQLite in-memory fallback using better-sqlite3 (native, fast).
  *
- * Uses sql.js (pure WASM SQLite, no native deps) in :memory: mode.
- * Runs adapted PG migrations at init, then exposes the same
- * `{ query(sql, params?) → { rows, rowCount } }` interface that the
- * rest of the server expects (matching the pg Pool.query shape).
+ * Exposes the same `{ query(sql, params?) → { rows, rowCount } }` interface
+ * that matches the pg Pool.query shape. Handles PG→SQLite SQL differences.
  */
-import initSqlJs, { type Database } from 'sql.js';
+import BetterSqlite3 from 'better-sqlite3';
 import { randomUUID } from 'crypto';
 
-let db: Database;
-let dbReady: Promise<void>;
+const sqliteDb = new BetterSqlite3(':memory:');
+sqliteDb.pragma('foreign_keys = ON');
+sqliteDb.pragma('journal_mode = WAL');
 
 // ---------------------------------------------------------------------------
 // Migrations (PG → SQLite adapted)
 // ---------------------------------------------------------------------------
 
 const MIGRATIONS: string[] = [
-  // 001_initial_schema
   `CREATE TABLE IF NOT EXISTS evaluation_tasks (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
@@ -48,8 +46,6 @@ const MIGRATIONS: string[] = [
   `CREATE INDEX IF NOT EXISTS idx_evaluation_results_file_hash ON evaluation_results(file_hash)`,
   `CREATE INDEX IF NOT EXISTS idx_evaluation_tasks_status ON evaluation_tasks(status)`,
   `CREATE INDEX IF NOT EXISTS idx_evaluation_tasks_created_at ON evaluation_tasks(created_at DESC)`,
-
-  // 002_tenants
   `CREATE TABLE IF NOT EXISTS tenants (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
@@ -63,8 +59,6 @@ const MIGRATIONS: string[] = [
   )`,
   `CREATE INDEX IF NOT EXISTS idx_tenants_slug ON tenants(slug)`,
   `CREATE INDEX IF NOT EXISTS idx_tenants_is_active ON tenants(is_active)`,
-
-  // 003_api_keys
   `CREATE TABLE IF NOT EXISTS api_keys (
     id TEXT PRIMARY KEY,
     tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
@@ -81,8 +75,6 @@ const MIGRATIONS: string[] = [
   `CREATE INDEX IF NOT EXISTS idx_api_keys_key_hash ON api_keys(key_hash)`,
   `CREATE INDEX IF NOT EXISTS idx_api_keys_tenant_id ON api_keys(tenant_id)`,
   `CREATE INDEX IF NOT EXISTS idx_api_keys_is_active ON api_keys(is_active)`,
-
-  // 004_parse_jobs
   `CREATE TABLE IF NOT EXISTS parse_jobs (
     id TEXT PRIMARY KEY,
     tenant_id TEXT REFERENCES tenants(id) ON DELETE SET NULL,
@@ -104,8 +96,6 @@ const MIGRATIONS: string[] = [
   `CREATE INDEX IF NOT EXISTS idx_parse_jobs_tenant_id ON parse_jobs(tenant_id)`,
   `CREATE INDEX IF NOT EXISTS idx_parse_jobs_status ON parse_jobs(status)`,
   `CREATE INDEX IF NOT EXISTS idx_parse_jobs_created_at ON parse_jobs(created_at DESC)`,
-
-  // 005_parse_cache
   `CREATE TABLE IF NOT EXISTS parse_cache (
     hash TEXT PRIMARY KEY,
     data TEXT NOT NULL,
@@ -116,13 +106,9 @@ const MIGRATIONS: string[] = [
   )`,
   `CREATE INDEX IF NOT EXISTS idx_parse_cache_updated_at ON parse_cache(updated_at)`,
   `CREATE INDEX IF NOT EXISTS idx_parse_cache_tenant_id ON parse_cache(tenant_id)`,
-
-  // 006_indexes
   `CREATE INDEX IF NOT EXISTS idx_api_keys_tenant_active ON api_keys(tenant_id, is_active)`,
   `CREATE INDEX IF NOT EXISTS idx_parse_jobs_tenant_status ON parse_jobs(tenant_id, status)`,
   `CREATE INDEX IF NOT EXISTS idx_evaluation_results_file_name ON evaluation_results(file_name)`,
-
-  // 007_prompt_experiments
   `CREATE TABLE IF NOT EXISTS prompt_experiments (
     id TEXT PRIMARY KEY,
     task_ids TEXT NOT NULL DEFAULT '[]',
@@ -131,8 +117,6 @@ const MIGRATIONS: string[] = [
     status TEXT NOT NULL DEFAULT 'pending',
     created_at TEXT DEFAULT (datetime('now'))
   )`,
-
-  // 008_flywheel_promotions
   `CREATE TABLE IF NOT EXISTS flywheel_promotions (
     id TEXT PRIMARY KEY,
     candidate_id TEXT NOT NULL,
@@ -140,44 +124,32 @@ const MIGRATIONS: string[] = [
     promoted_at TEXT DEFAULT (datetime('now'))
   )`,
   `CREATE INDEX IF NOT EXISTS idx_flywheel_promotions_candidate ON flywheel_promotions(candidate_id)`,
-
-  // schema_migrations tracker
   `CREATE TABLE IF NOT EXISTS schema_migrations (
     version TEXT PRIMARY KEY,
     executed_at TEXT DEFAULT (datetime('now'))
   )`,
 ];
 
-// ---------------------------------------------------------------------------
-// Init: load WASM + run migrations
-// ---------------------------------------------------------------------------
-
-dbReady = (async () => {
-  const SQL = await initSqlJs();
-  db = new SQL.Database();
-  db.run('PRAGMA foreign_keys = ON');
-  for (const sql of MIGRATIONS) {
-    db.run(sql);
-  }
-})();
-
-// ---------------------------------------------------------------------------
-// SQL rewriting: PG → SQLite
-// ---------------------------------------------------------------------------
-
-function rewritePlaceholders(sql: string): string {
-  let idx = 0;
-  return sql.replace(/\$\d+/g, () => { idx++; return `?${idx}`; });
+for (const m of MIGRATIONS) {
+  sqliteDb.exec(m);
 }
+
+// ---------------------------------------------------------------------------
+// SQL rewriting: PG → SQLite (simplified)
+// ---------------------------------------------------------------------------
 
 function rewriteSql(sql: string): string {
   let s = sql;
+  // $1, $2 → ?, ?
+  s = s.replace(/\$\d+/g, '?');
+  // NOW() → datetime('now')
   s = s.replace(/\bNOW\(\)/gi, "datetime('now')");
+  // ILIKE → LIKE
   s = s.replace(/\bILIKE\b/gi, 'LIKE');
-  s = s.replace(/(\w+)->>'\s*(\w+)\s*'/g, "json_extract($1, '$$.$2')");
+  // INTERVAL expressions
   s = s.replace(
-    /datetime\('now'\)\s*-\s*INTERVAL\s+'1 day'\s*\*\s*\?\d*/gi,
-    "datetime('now', '-' || ?1 || ' days')"
+    /datetime\('now'\)\s*-\s*INTERVAL\s+'1 day'\s*\*\s*\?/gi,
+    "datetime('now', '-' || ? || ' days')"
   );
   s = s.replace(
     /datetime\('now'\)\s*-\s*INTERVAL\s+'(\d+)\s+days?'/gi,
@@ -187,27 +159,34 @@ function rewriteSql(sql: string): string {
     /datetime\('now'\)\s*-\s*INTERVAL\s+'1 minute'/gi,
     "datetime('now', '-1 minutes')"
   );
+  // COUNT(*) FILTER (WHERE ...) → SUM(CASE WHEN ... THEN 1 ELSE 0 END)
   s = s.replace(
     /COUNT\(\*\)\s+FILTER\s*\(\s*WHERE\s+(.+?)\)/gi,
     'SUM(CASE WHEN $1 THEN 1 ELSE 0 END)'
   );
+  // AVG(...) FILTER (WHERE ...) → AVG(CASE WHEN ... THEN ... ELSE NULL END)
   s = s.replace(
     /AVG\((\w+)\)\s+FILTER\s*\(\s*WHERE\s+(.+?)\)/gi,
     'AVG(CASE WHEN $2 THEN $1 ELSE NULL END)'
   );
+  // Type casts
   s = s.replace(/::int\b/gi, '');
+  s = s.replace(/::text\b/gi, '');
+  // ARRAY[...] → JSON array string
   s = s.replace(/ARRAY\[([^\]]+)\]/gi, (_m, inner) => {
-    const items = inner.split(',').map((i: string) => i.trim());
-    return `'${JSON.stringify(items.map((i: string) => i.replace(/'/g, '')))}'`;
+    const items = inner.split(',').map((i: string) => i.trim().replace(/'/g, ''));
+    return `'${JSON.stringify(items)}'`;
   });
+  // Boolean literals
   s = s.replace(/\bTRUE\b/gi, '1');
   s = s.replace(/\bFALSE\b/gi, '0');
-  s = rewritePlaceholders(s);
+  // gen_random_uuid() — not needed, we inject UUIDs in JS
+  s = s.replace(/\bgen_random_uuid\(\)/gi, '?');
   return s;
 }
 
 // ---------------------------------------------------------------------------
-// JSON column handling
+// JSON column hydration
 // ---------------------------------------------------------------------------
 
 const JSON_COLUMNS = new Set([
@@ -216,11 +195,9 @@ const JSON_COLUMNS = new Set([
   'scopes',
 ]);
 
-function hydrateRow(columns: string[], values: unknown[]): Record<string, unknown> {
+function hydrateRow(row: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
-  for (let i = 0; i < columns.length; i++) {
-    const key = columns[i];
-    const value = values[i];
+  for (const [key, value] of Object.entries(row)) {
     if (JSON_COLUMNS.has(key) && typeof value === 'string') {
       try { out[key] = JSON.parse(value); } catch { out[key] = value; }
     } else if (key === 'is_active' || key === 'from_cache') {
@@ -246,81 +223,82 @@ function serializeParam(value: unknown): unknown {
 // Public interface — matches pg Pool.query()
 // ---------------------------------------------------------------------------
 
-export const sqliteDb = {
-  async query(text: string, params?: unknown[]): Promise<{ rows: Record<string, unknown>[]; rowCount: number }> {
-    await dbReady;
-
+export const betterSqliteDb = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async query<T = Record<string, any>>(text: string, params?: unknown[]): Promise<{ rows: T[]; rowCount: number }> {
     const serializedParams = (params || []).map(serializeParam);
 
-    // Handle RETURNING clause — strip it and do a follow-up SELECT
-    const returningMatch = text.match(/\bRETURNING\s+.*/i);
-    const hasReturning = !!returningMatch;
+    // Handle RETURNING clause
+    const hasReturning = /\bRETURNING\s+/i.test(text);
     let sqlClean = hasReturning ? text.replace(/\bRETURNING\s+.*/i, '').trim() : text;
     sqlClean = sqlClean.replace(/;\s*$/, '');
 
     const rewritten = rewriteSql(sqlClean);
     const trimmed = rewritten.trimStart().toUpperCase();
 
+    // SELECT / WITH
     if (trimmed.startsWith('SELECT') || trimmed.startsWith('WITH')) {
-      const stmt = db.prepare(rewritten);
-      stmt.bind(serializedParams);
-      const rows: Record<string, unknown>[] = [];
-      while (stmt.step()) {
-        const columns = stmt.getColumnNames();
-        rows.push(hydrateRow(columns, stmt.get()));
-      }
-      stmt.free();
-      return { rows, rowCount: rows.length };
+      const rows = sqliteDb.prepare(rewritten).all(...serializedParams) as Record<string, unknown>[];
+      return { rows: rows.map(hydrateRow) as T[], rowCount: rows.length };
     }
 
+    // INSERT
     if (trimmed.startsWith('INSERT')) {
-      // Generate UUID for id column if not provided
       const tableMatch = rewritten.match(/INSERT\s+(?:OR\s+\w+\s+)?INTO\s+(\w+)/i);
       const table = tableMatch?.[1];
 
-      // Check if this INSERT has an id value — if not, generate one
       let finalParams = [...serializedParams];
       let finalSql = rewritten;
-      if (table && !rewritten.toLowerCase().includes('(id') && !rewritten.toLowerCase().includes('( id')) {
-        // id not in column list — add it
-        const colMatch = finalSql.match(/\(([^)]+)\)\s*VALUES/i);
-        if (colMatch) {
-          const newCols = `(id, ${colMatch[1]})`;
-          finalSql = finalSql.replace(colMatch[0], `${newCols} VALUES`);
-          const valMatch = finalSql.match(/VALUES\s*\(([^)]+)\)/i);
-          if (valMatch) {
-            finalSql = finalSql.replace(valMatch[0], `VALUES (?${finalParams.length + 1}, ${valMatch[1]})`);
-            finalParams.push(randomUUID());
-          }
-        }
-      } else {
-        // id is in column list — check if the value is null/missing
+
+      // Inject UUID for id column if not provided
+      if (table) {
         const colMatch = finalSql.match(/\(([^)]+)\)\s*VALUES/i);
         if (colMatch) {
           const cols = colMatch[1].split(',').map(c => c.trim().toLowerCase());
           const idIdx = cols.indexOf('id');
-          if (idIdx >= 0 && (finalParams[idIdx] === null || finalParams[idIdx] === undefined)) {
+          if (idIdx === -1) {
+            // id not in column list — add it
+            finalSql = finalSql.replace(colMatch[0], `(id, ${colMatch[1]}) VALUES`);
+            const valMatch = finalSql.match(/VALUES\s*\(([^)]+)\)/i);
+            if (valMatch) {
+              finalSql = finalSql.replace(valMatch[0], `VALUES (?, ${valMatch[1]})`);
+              finalParams = [randomUUID(), ...finalParams];
+            }
+          } else if (finalParams[idIdx] === null || finalParams[idIdx] === undefined) {
             finalParams[idIdx] = randomUUID();
           }
         }
       }
 
-      db.run(finalSql, finalParams);
-      const changes = db.getRowsModified();
+      // Handle gen_random_uuid() placeholder
+      const uuidPlaceholderCount = (text.match(/gen_random_uuid\(\)/gi) || []).length;
+      if (uuidPlaceholderCount > 0) {
+        // Each gen_random_uuid() was replaced with ?, add UUID params
+        const newParams: unknown[] = [];
+        let paramIdx = 0;
+        for (const char of finalSql) {
+          if (char === '?') {
+            if (paramIdx < finalParams.length) {
+              newParams.push(finalParams[paramIdx]);
+            } else {
+              newParams.push(randomUUID());
+            }
+            paramIdx++;
+          }
+        }
+        finalParams = newParams;
+      }
+
+      const info = sqliteDb.prepare(finalSql).run(...finalParams);
 
       if (hasReturning && table) {
-        const lastId = finalParams[0]; // id is always first after our injection
-        const selectStmt = db.prepare(`SELECT * FROM ${table} WHERE rowid = last_insert_rowid()`);
-        const rows: Record<string, unknown>[] = [];
-        while (selectStmt.step()) {
-          rows.push(hydrateRow(selectStmt.getColumnNames(), selectStmt.get()));
-        }
-        selectStmt.free();
-        if (rows.length > 0) return { rows, rowCount: 1 };
+        const rows = sqliteDb.prepare(`SELECT * FROM ${table} WHERE rowid = ?`).all(info.lastInsertRowid) as Record<string, unknown>[];
+        return { rows: rows.map(hydrateRow) as T[], rowCount: 1 };
       }
-      return { rows: [], rowCount: changes };
+      return { rows: [], rowCount: info.changes };
     }
 
+    // UPDATE
     if (trimmed.startsWith('UPDATE')) {
       if (hasReturning) {
         const tableMatch = rewritten.match(/UPDATE\s+(\w+)\s+SET/i);
@@ -328,36 +306,33 @@ export const sqliteDb = {
         const whereMatch = rewritten.match(/\bWHERE\s+(.+)$/i);
 
         if (table && whereMatch) {
+          // Count SET clause params to split params correctly
           const setClause = rewritten.substring(0, rewritten.search(/\bWHERE\b/i));
-          const setParamCount = (setClause.match(/\?\d+/g) || []).length;
+          const setParamCount = (setClause.match(/\?/g) || []).length;
           const whereParams = serializedParams.slice(setParamCount);
 
           // Get IDs before update
-          const idStmt = db.prepare(`SELECT id FROM ${table} WHERE ${rewriteSql(whereMatch[1])}`);
-          idStmt.bind(whereParams);
-          const ids: string[] = [];
-          while (idStmt.step()) { ids.push(idStmt.get()[0] as string); }
-          idStmt.free();
+          const ids = sqliteDb.prepare(
+            `SELECT id FROM ${table} WHERE ${rewriteSql(whereMatch[1])}`
+          ).all(...whereParams) as { id: string }[];
 
-          db.run(rewritten, serializedParams);
-          const changes = db.getRowsModified();
+          const info = sqliteDb.prepare(rewritten).run(...serializedParams);
 
           if (ids.length > 0) {
-            const placeholders = ids.map((_, i) => `?${i + 1}`).join(', ');
-            const fetchStmt = db.prepare(`SELECT * FROM ${table} WHERE id IN (${placeholders})`);
-            fetchStmt.bind(ids);
-            const rows: Record<string, unknown>[] = [];
-            while (fetchStmt.step()) { rows.push(hydrateRow(fetchStmt.getColumnNames(), fetchStmt.get())); }
-            fetchStmt.free();
-            return { rows, rowCount: changes };
+            const placeholders = ids.map(() => '?').join(', ');
+            const rows = sqliteDb.prepare(
+              `SELECT * FROM ${table} WHERE id IN (${placeholders})`
+            ).all(...ids.map(r => r.id)) as Record<string, unknown>[];
+            return { rows: rows.map(hydrateRow) as T[], rowCount: info.changes };
           }
         }
       }
 
-      db.run(rewritten, serializedParams);
-      return { rows: [], rowCount: db.getRowsModified() };
+      const info = sqliteDb.prepare(rewritten).run(...serializedParams);
+      return { rows: [], rowCount: info.changes };
     }
 
+    // DELETE
     if (trimmed.startsWith('DELETE')) {
       if (hasReturning) {
         const tableMatch = rewritten.match(/DELETE\s+FROM\s+(\w+)/i);
@@ -365,24 +340,22 @@ export const sqliteDb = {
         const whereMatch = rewritten.match(/\bWHERE\s+(.+)$/i);
 
         if (table && whereMatch) {
-          const fetchStmt = db.prepare(`SELECT * FROM ${table} WHERE ${rewriteSql(whereMatch[1])}`);
-          fetchStmt.bind(serializedParams);
-          const rows: Record<string, unknown>[] = [];
-          while (fetchStmt.step()) { rows.push(hydrateRow(fetchStmt.getColumnNames(), fetchStmt.get())); }
-          fetchStmt.free();
+          const rows = sqliteDb.prepare(
+            `SELECT * FROM ${table} WHERE ${rewriteSql(whereMatch[1])}`
+          ).all(...serializedParams) as Record<string, unknown>[];
 
-          db.run(rewritten, serializedParams);
-          return { rows, rowCount: db.getRowsModified() };
+          sqliteDb.prepare(rewritten).run(...serializedParams);
+          return { rows: rows.map(hydrateRow) as T[], rowCount: rows.length };
         }
       }
 
-      db.run(rewritten, serializedParams);
-      return { rows: [], rowCount: db.getRowsModified() };
+      const info = sqliteDb.prepare(rewritten).run(...serializedParams);
+      return { rows: [], rowCount: info.changes };
     }
 
     // DDL / other
     try {
-      db.run(rewritten);
+      sqliteDb.exec(rewritten);
     } catch {
       // Silently ignore DDL failures for migration compat
     }

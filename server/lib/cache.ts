@@ -28,7 +28,7 @@ export async function getCached(hash: string): Promise<CacheData | null> {
       if (result.rows.length === 0) return null;
 
       const row = result.rows[0];
-      const age = Date.now() - new Date(row.timestamp).getTime();
+      const age = Date.now() - new Date(row.timestamp as string).getTime();
       const maxAge = CACHE_TTL_DAYS * 24 * 60 * 60 * 1000;
 
       if (age > maxAge || row.version !== VERSION) {
@@ -36,7 +36,7 @@ export async function getCached(hash: string): Promise<CacheData | null> {
         return null;
       }
 
-      return row.data;
+      return row.data as CacheData;
     }
 
     // 内存降级
@@ -71,7 +71,7 @@ export async function setCache(hash: string, data: CacheData): Promise<void> {
 
       // 清理超限条目
       const countResult = await db.query('SELECT COUNT(*) FROM parse_cache');
-      if (parseInt(countResult.rows[0].count) > CACHE_MAX_ENTRIES) {
+      if (parseInt(countResult.rows[0].count as string) > CACHE_MAX_ENTRIES) {
         await db.query(
           `DELETE FROM parse_cache WHERE hash IN (
             SELECT hash FROM parse_cache ORDER BY updated_at ASC LIMIT $1
