@@ -4,7 +4,6 @@ import { serverLogger } from '../lib/logger';
 
 const router = Router();
 
-// GET / — list all experiments
 router.get('/', async (_req, res) => {
   try {
     const result = await db.query(
@@ -18,7 +17,6 @@ router.get('/', async (_req, res) => {
   }
 });
 
-// GET /:id — get single experiment
 router.get('/:id', async (req, res) => {
   try {
     const result = await db.query(
@@ -36,7 +34,6 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// POST / — create experiment
 router.post('/', async (req, res) => {
   try {
     const { taskIds, weakFields, suggestion } = req.body;
@@ -53,7 +50,6 @@ router.post('/', async (req, res) => {
   }
 });
 
-// PUT /:id — update experiment
 router.put('/:id', async (req, res) => {
   try {
     const { taskIds, weakFields, suggestion, status } = req.body;
@@ -83,7 +79,6 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// DELETE /:id — delete experiment
 router.delete('/:id', async (req, res) => {
   try {
     const result = await db.query(

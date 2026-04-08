@@ -38,7 +38,7 @@ export interface TenantsTable {
   slug: string;
   plan: Generated<string>;
   config: Generated<string>;
-  is_active: ColumnType<boolean, boolean | number, boolean | number>;
+  is_active: ColumnType<boolean, boolean | number | undefined, boolean | number>;
   quota_per_minute: Generated<number>;
   created_at: Generated<string>;
   updated_at: Generated<string>;
@@ -52,7 +52,7 @@ export interface ApiKeysTable {
   key_hash: string;
   scopes: Generated<string>;
   rate_limit: Generated<number>;
-  is_active: ColumnType<boolean, boolean | number, boolean | number>;
+  is_active: ColumnType<boolean, boolean | number | undefined, boolean | number>;
   expires_at: string | null;
   last_used_at: string | null;
   created_at: Generated<string>;
