@@ -1,14 +1,15 @@
 import { parsePdf } from '@lib/parsers/parsePdf';
 import { parseDocx } from '@lib/parsers/parseDocx';
 import { extractResume } from '@lib/extractWithLLM';
-import { classifyContent } from '@lib/classifiers/contentClassifier';
+import { classifyContent } from '@shared/classifiers/contentClassifier';
 import { classifyResume } from '@lib/classifiers';
-import { getStrategy } from '@lib/parsingStrategy';
+import { getStrategy } from '@shared/parsingStrategy';
 import { hashFile, getCached, setCache } from '@lib/cache';
-import { runWithLimit } from '@lib/concurrency';
+import { runWithLimit } from '@shared/concurrency';
 import { recordSuccess } from '@lib/metrics';
 import { validateWithZod } from '@lib/validation/engine';
 import { logger } from '@lib/logger';
+import { createLogFn } from '@shared/logger';
 import { cacheAnalyzer } from '@lib/cacheAnalyzer';
 import type { StageName } from '@lib/processTracer';
 import { runPipeline } from '@shared/resumeProcessor';
@@ -18,16 +19,16 @@ export interface ProcessOptions {
   enableCache?: boolean;
   enableClassification?: boolean;
   enableValidation?: boolean;
-  onStageComplete?: (stage: StageName, data?: any) => void;
+  onStageComplete?: (stage: StageName, data?: unknown) => void;
 }
 
 export interface ProcessResult {
   resume: PipelineResult['resume'];
-  classification?: any;
+  classification?: PipelineResult['classification'];
   difficultyClass?: string;
   fromCache: boolean;
   hash: string;
-  validation?: any;
+  validation?: PipelineResult['validation'];
   attempts?: number;
   finalStrategy?: string;
 }
@@ -47,7 +48,7 @@ function createFrontendAdapter(file: File): PipelineAdapter {
     onCacheHit: (cacheTime) => cacheAnalyzer.recordHit(cacheTime),
     onCacheMiss: (cacheTime) => cacheAnalyzer.recordMiss(cacheTime),
     onComplete: (time, fromCache) => recordSuccess(time, fromCache),
-    log: (level, msg, meta) => (logger as any)[level]?.(msg, meta),
+    log: createLogFn(logger),
   };
 }
 

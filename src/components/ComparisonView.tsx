@@ -13,11 +13,9 @@ const FIELD_LABELS: Record<string, string> = {
   'basics.location': '地点',
 };
 
-function getValueByPath(obj: any, path: string): any {
-  return path.split('.').reduce((curr, key) => curr?.[key], obj);
-}
+import { getValueByPath } from '@lib/utils';
 
-function compareValues(a: any, b: any): 'match' | 'partial' | 'missing' | 'mismatch' {
+function compareValues(a: unknown, b: unknown): 'match' | 'partial' | 'missing' | 'mismatch' {
   if (a === undefined && b === undefined) return 'match';
   if (a === undefined || b === undefined) return 'missing';
   if (JSON.stringify(a) === JSON.stringify(b)) return 'match';
@@ -65,8 +63,8 @@ export default function ComparisonView({ parsed, annotation }: Props) {
               return (
                 <tr key={field} className={`border-t border-border-light ${style.row}`}>
                   <td className="px-4 py-2.5 font-medium text-gray-600">{FIELD_LABELS[field] || field}</td>
-                  <td className="px-4 py-2.5">{parsedVal ?? <span className="text-gray-400">-</span>}</td>
-                  <td className="px-4 py-2.5">{annotationVal ?? <span className="text-gray-400">-</span>}</td>
+                  <td className="px-4 py-2.5">{parsedVal != null ? String(parsedVal) : <span className="text-gray-400">-</span>}</td>
+                  <td className="px-4 py-2.5">{annotationVal != null ? String(annotationVal) : <span className="text-gray-400">-</span>}</td>
                   <td className="px-4 py-2.5"><span className={style.badge}>{style.label}</span></td>
                 </tr>
               );

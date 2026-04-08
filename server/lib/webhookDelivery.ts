@@ -22,7 +22,7 @@ export async function deliverWebhook(url: string, payload: object): Promise<bool
 
       serverLogger.warn('Webhook delivery got non-OK response', { url, status: res.status, attempt });
     } catch (error) {
-      serverLogger.warn('Webhook delivery failed', { url, attempt, error: (error as Error).message });
+      serverLogger.warn('Webhook delivery failed', { url, attempt, error: error instanceof Error ? error.message : 'Unknown error' });
     }
 
     if (attempt < 2) {

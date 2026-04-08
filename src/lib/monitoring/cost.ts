@@ -1,37 +1,63 @@
 import { calculateCost, DEFAULT_MODEL } from '@shared/pricing';
 
+interface ModelStats {
+  calls: number;
+  inputTokens: number;
+  outputTokens: number;
+}
+
 class CostTracker {
-  private calls = 0;
-  private inputTokens = 0;
-  private outputTokens = 0;
-  private model = DEFAULT_MODEL;
+  private perModel = new Map<string, ModelStats>();
 
-  setModel(model: string) {
-    this.model = model;
+  private getOrCreate(model: string): ModelStats {
+    let stats = this.perModel.get(model);
+    if (!stats) {
+      stats = { calls: 0, inputTokens: 0, outputTokens: 0 };
+      this.perModel.set(model, stats);
+    }
+    return stats;
   }
 
-  record(inputTokens: number, outputTokens: number) {
-    this.calls++;
-    this.inputTokens += inputTokens;
-    this.outputTokens += outputTokens;
+  record(model: string, inputTokens: number, outputTokens: number) {
+    const stats = this.getOrCreate(model);
+    stats.calls++;
+    stats.inputTokens += inputTokens;
+    stats.outputTokens += outputTokens;
   }
 
-  getStats() {
-    const { inputCost, outputCost, totalCost } = calculateCost(
-      this.model,
-      this.inputTokens,
-      this.outputTokens,
-    );
+  getStats(model?: string) {
+    if (model) {
+      const stats = this.perModel.get(model) || { calls: 0, inputTokens: 0, outputTokens: 0 };
+      const { inputCost, outputCost, totalCost } = calculateCost(model, stats.inputTokens, stats.outputTokens);
+      return {
+        calls: stats.calls,
+        inputTokens: stats.inputTokens,
+        outputTokens: stats.outputTokens,
+        tokens: stats.inputTokens + stats.outputTokens,
+        inputCost,
+        outputCost,
+        estimatedCost: totalCost,
+        model,
+      };
+    }
 
+    // Aggregate across all models
+    let totalCalls = 0, totalInput = 0, totalOutput = 0, totalCost = 0;
+    for (const [m, stats] of this.perModel) {
+      totalCalls += stats.calls;
+      totalInput += stats.inputTokens;
+      totalOutput += stats.outputTokens;
+      totalCost += calculateCost(m, stats.inputTokens, stats.outputTokens).totalCost;
+    }
     return {
-      calls: this.calls,
-      inputTokens: this.inputTokens,
-      outputTokens: this.outputTokens,
-      tokens: this.inputTokens + this.outputTokens,
-      inputCost,
-      outputCost,
+      calls: totalCalls,
+      inputTokens: totalInput,
+      outputTokens: totalOutput,
+      tokens: totalInput + totalOutput,
+      inputCost: 0,
+      outputCost: 0,
       estimatedCost: totalCost,
-      model: this.model,
+      model: this.perModel.size === 1 ? this.perModel.keys().next().value! : DEFAULT_MODEL,
     };
   }
 }

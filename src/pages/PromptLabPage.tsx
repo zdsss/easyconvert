@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { evaluationApi } from '@lib/api/evaluationApi';
 import { analyzeWeakFields, type FieldMetric } from '@lib/promptOptimizer';
-import { getPrompt } from '@lib/prompts';
+import { getPrompt } from '@shared/prompts';
 import Icon from '@components/ui/Icon';
 
 interface Experiment {
@@ -43,11 +43,11 @@ export default function PromptLabPage() {
         fetch('/api/prompt-experiments').then(r => r.json()),
       ]);
       const allTasks = Array.isArray(taskList) ? taskList : [];
-      setTasks(allTasks.map((t: any) => ({ id: t.id, name: t.name })));
+      setTasks(allTasks.map((t: { id: string; name: string }) => ({ id: t.id, name: t.name })));
       setExperiments(Array.isArray(expList) ? expList : []);
 
       // Aggregate field metrics from completed tasks with results
-      const metrics = await aggregateFieldMetrics(allTasks.filter((t: any) => t.status === 'completed'));
+      const metrics = await aggregateFieldMetrics(allTasks.filter((t: { status: string }) => t.status === 'completed'));
       setFieldMetrics(metrics);
       setWeakFields(analyzeWeakFields(metrics));
     } catch {
@@ -57,7 +57,7 @@ export default function PromptLabPage() {
     }
   }
 
-  async function aggregateFieldMetrics(completedTasks: any[]): Promise<FieldMetric[]> {
+  async function aggregateFieldMetrics(completedTasks: { id: string }[]): Promise<FieldMetric[]> {
     const fieldMap: Record<string, { total: number; correct: number }> = {};
     for (const task of completedTasks.slice(0, 10)) {
       try {
@@ -131,7 +131,7 @@ export default function PromptLabPage() {
     }
   }
 
-  function buildFieldAccMap(results: any[]): Record<string, number> {
+  function buildFieldAccMap(results: unknown[]): Record<string, number> {
     const map: Record<string, { total: number; correct: number }> = {};
     if (!Array.isArray(results)) return {};
     for (const r of results) {

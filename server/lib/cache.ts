@@ -52,8 +52,8 @@ export async function getCached(hash: string): Promise<CacheData | null> {
     }
 
     return cached.data;
-  } catch (error) {
-    serverLogger.warn('Cache read failed', { error: (error as Error).message });
+  } catch (error: unknown) {
+    serverLogger.warn('Cache read failed', { error: error instanceof Error ? error.message : 'Unknown error' });
     return null;
   }
 }
@@ -93,7 +93,7 @@ export async function setCache(hash: string, data: CacheData): Promise<void> {
     }
 
     memoryCache.set(hash, { data, timestamp: Date.now(), version: VERSION });
-  } catch (error) {
-    serverLogger.warn('Cache write failed', { error: (error as Error).message });
+  } catch (error: unknown) {
+    serverLogger.warn('Cache write failed', { error: error instanceof Error ? error.message : 'Unknown error' });
   }
 }

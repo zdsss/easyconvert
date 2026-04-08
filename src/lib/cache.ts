@@ -1,7 +1,9 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
 import { CacheData } from './types';
 import { logger } from './logger';
-import { CACHE_CONFIG } from './constants';
+
+const CACHE_TTL_DAYS = 30;
+const CACHE_MAX_ENTRIES = 5000;
 
 interface CacheDB extends DBSchema {
   resumes: {
@@ -59,7 +61,7 @@ export async function getCached(hash: string): Promise<CacheData | null> {
     if (!cached) return null;
 
     const age = Date.now() - cached.timestamp;
-    const maxAge = CACHE_CONFIG.TTL_DAYS * 24 * 60 * 60 * 1000;
+    const maxAge = CACHE_TTL_DAYS * 24 * 60 * 60 * 1000;
 
     if (age > maxAge || cached.version !== VERSION) {
       await database.delete(STORE_NAME, hash);
@@ -85,7 +87,7 @@ export async function setCache(hash: string, data: CacheData): Promise<void> {
     // Check cache size
     const allKeys = await database.getAllKeys(STORE_NAME);
     logger.debug('Cache: Saving hash', { hash, totalEntries: allKeys.length });
-    if (allKeys.length >= CACHE_CONFIG.MAX_ENTRIES) {
+    if (allKeys.length >= CACHE_MAX_ENTRIES) {
       await cleanOldestEntries(database);
     }
 
@@ -109,7 +111,7 @@ async function cleanOldestEntries(database: IDBPDatabase<CacheDB>): Promise<void
     const allEntries = await database.getAll(STORE_NAME);
     allEntries.sort((a, b) => a.timestamp - b.timestamp);
 
-    const toDelete = allEntries.slice(0, Math.floor(CACHE_CONFIG.MAX_ENTRIES * 0.2));
+    const toDelete = allEntries.slice(0, Math.floor(CACHE_MAX_ENTRIES * 0.2));
     for (const entry of toDelete) {
       await database.delete(STORE_NAME, entry.hash);
     }

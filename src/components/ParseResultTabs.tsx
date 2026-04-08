@@ -81,7 +81,7 @@ function BasicsTab({ resume }: { resume: Resume }) {
       <FieldRow label="邮箱" value={b.email} />
       <FieldRow label="职位" value={b.title} />
       <FieldRow label="地点" value={b.location} />
-      {(b as any).summary && <FieldRow label="简介" value={(b as any).summary} />}
+      {resume.summary && <FieldRow label="简介" value={resume.summary} />}
     </div>
   );
 }
@@ -91,7 +91,7 @@ function WorkTab({ resume }: { resume: Resume }) {
   if (!work?.length) return <p className="text-sm text-text-secondary">无工作经历</p>;
   return (
     <div className="space-y-4">
-      {work.map((w: any, i: number) => (
+      {work.map((w, i) => (
         <div key={i} className="p-4 bg-surface-secondary rounded-lg">
           <div className="flex items-start justify-between">
             <div>
@@ -100,9 +100,9 @@ function WorkTab({ resume }: { resume: Resume }) {
             </div>
             <span className="text-xs text-text-tertiary">{w.startDate} ~ {w.endDate || '至今'}</span>
           </div>
-          {w.highlights?.length > 0 && (
+          {w.highlights && w.highlights.length > 0 && (
             <ul className="mt-2 space-y-1">
-              {w.highlights.map((h: string, j: number) => (
+              {w.highlights!.map((h, j) => (
                 <li key={j} className="text-xs text-text-secondary flex gap-1.5">
                   <span className="text-text-tertiary mt-0.5">·</span>
                   {h}
@@ -121,7 +121,7 @@ function EducationTab({ resume }: { resume: Resume }) {
   if (!edu?.length) return <p className="text-sm text-text-secondary">无教育背景</p>;
   return (
     <div className="space-y-3">
-      {edu.map((e: any, i: number) => (
+      {edu.map((e, i) => (
         <div key={i} className="p-4 bg-surface-secondary rounded-lg">
           <p className="text-sm font-semibold text-text-primary">{e.institution || e.school}</p>
           <p className="text-sm text-text-secondary">{e.degree} · {e.major || '-'}</p>

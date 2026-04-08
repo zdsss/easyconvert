@@ -24,6 +24,17 @@ export interface Logger {
   error(message: string, error?: Error, meta?: Record<string, unknown>): void;
 }
 
+/** Create a (level, msg, meta) adapter from a Logger instance */
+export function createLogFn(logger: Logger): (level: 'debug' | 'info' | 'warn' | 'error', msg: string, meta?: Record<string, unknown>) => void {
+  return (level, msg, meta) => {
+    if (level === 'error') {
+      logger.error(msg, undefined, meta);
+    } else {
+      logger[level](msg, meta);
+    }
+  };
+}
+
 export function createLogger(config: LoggerConfig): Logger {
   const formatMessage = (level: LogLevel, message: string, meta?: Record<string, unknown>): string => {
     if (config.format === 'json') {

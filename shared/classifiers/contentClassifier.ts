@@ -16,7 +16,7 @@ const MODULES = [
   'interests',
 ];
 
-export function classifyContent(data: any, text: string): ContentClassification {
+export function classifyContent(data: Record<string, unknown>, text: string): ContentClassification {
   const modules = MODULES.filter(
     (m) => data[m] && (Array.isArray(data[m]) ? data[m].length > 0 : Object.keys(data[m]).length > 0)
   );

@@ -80,7 +80,7 @@ router.get('/', async (req, res) => {
     const offset = (Number(page) - 1) * Number(limit);
 
     let query = 'SELECT * FROM evaluation_tasks';
-    const params: any[] = [];
+    const params: (string | number)[] = [];
 
     if (status) {
       query += ' WHERE status = $1';

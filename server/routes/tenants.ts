@@ -9,7 +9,7 @@ router.get('/', async (_req, res) => {
     const result = await db.query(
       `SELECT id, name, slug, created_at, quota_per_minute FROM tenants ORDER BY created_at DESC`
     );
-    const tenants = (result.rows || []).map((t: any) => ({
+    const tenants = (result.rows || []).map((t: Record<string, unknown>) => ({
       id: t.id,
       name: t.name,
       slug: t.slug,

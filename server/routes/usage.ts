@@ -67,7 +67,11 @@ router.get('/', async (req, res) => {
         const d = new Date();
         d.setDate(d.getDate() - i);
         const dateStr = d.toISOString().split('T')[0];
-        const found = dailyResult.rows.find((r: any) => r.date?.toISOString?.().split('T')[0] === dateStr || r.date === dateStr);
+        const found = dailyResult.rows.find((r: Record<string, unknown>) => {
+          const d = r.date as Date | string | undefined;
+          if (d && typeof d === 'object' && 'toISOString' in d) return (d as Date).toISOString().split('T')[0] === dateStr;
+          return d === dateStr;
+        });
         requestsByDay.push({ date: dateStr, count: found ? parseInt(found.count) : 0 });
       }
 
@@ -106,7 +110,7 @@ router.get('/', async (req, res) => {
         [days]
       );
 
-      const requestsByEndpoint = endpointResult.rows.map((r: any) => ({
+      const requestsByEndpoint = endpointResult.rows.map((r: Record<string, unknown>) => ({
         endpoint: r.endpoint,
         count: parseInt(r.count) || 0,
         avgLatency: Math.round(parseFloat(r.avg_latency) || 0),
@@ -193,7 +197,11 @@ router.get('/overview', async (req, res) => {
         const d = new Date();
         d.setDate(d.getDate() - i);
         const dateStr = d.toISOString().split('T')[0];
-        const found = trendResult.rows.find((r: any) => r.date?.toISOString?.().split('T')[0] === dateStr || r.date === dateStr);
+        const found = trendResult.rows.find((r: Record<string, unknown>) => {
+          const d = r.date as Date | string | undefined;
+          if (d && typeof d === 'object' && 'toISOString' in d) return (d as Date).toISOString().split('T')[0] === dateStr;
+          return d === dateStr;
+        });
         requestTrend.push({ date: dateStr, count: found ? parseInt(found.count) : 0 });
       }
 

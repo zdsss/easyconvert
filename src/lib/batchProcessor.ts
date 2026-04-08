@@ -3,7 +3,7 @@ import { ValidationError, Resume } from '@lib/types';
 import { BATCH_CONFIG } from '@lib/constants';
 import { logger } from '@lib/logger';
 import { adaptiveConcurrency } from '@lib/adaptiveConcurrency';
-import { runWithLimit } from '@lib/concurrency';
+import { runWithLimit } from '@shared/concurrency';
 import { StageName } from '@lib/processTracer';
 
 export type ErrorCategory = 'timeout' | 'validation' | 'parse' | 'llm' | 'unknown';
@@ -83,8 +83,8 @@ export async function processBatch(
           logger.debug(`Processed ${file.name} in ${time}ms`);
           onFileComplete?.(file.name, true, result.fromCache);
           return { file, success: true as const, resume: result.resume, fromCache: result.fromCache, time, idx };
-        } catch (error) {
-          const err = error as Error;
+        } catch (error: unknown) {
+          const err = error instanceof Error ? error : new Error(String(error));
           const errorCategory = categorizeError(err);
           const time = Date.now() - startTime;
           adaptiveConcurrency.recordError();

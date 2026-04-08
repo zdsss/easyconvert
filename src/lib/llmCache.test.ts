@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { deduplicateRequest, clearCache } from './llmCache';
+import { deduplicateRequest } from '@shared/llmCache';
 
 describe('llmCache', () => {
   beforeEach(() => {
-    clearCache();
+    // deduplicateRequest auto-cleans on finally, no manual clear needed
   });
 
   it('should deduplicate concurrent requests', async () => {

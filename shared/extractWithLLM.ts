@@ -14,7 +14,7 @@ export interface ExtractEnvConfig {
   circuitBreakerExecute<T>(fn: () => Promise<T>): Promise<T>;
   createTimeoutError(message: string): Error;
   /** Called after a successful LLM response — cost tracking, confidence, etc. */
-  onResponse?(parsed: Record<string, any>, data: any, model: string, lang?: string): void;
+  onResponse?(parsed: Record<string, unknown>, data: Record<string, unknown>, model: string, lang?: string): void;
   /** Optional language detection (frontend only) */
   detectLanguage?(text: string): string;
 }
@@ -22,18 +22,21 @@ export interface ExtractEnvConfig {
 // ---------------------------------------------------------------------------
 // Pure helper functions
 // ---------------------------------------------------------------------------
-export function isRetryableError(error: any): boolean {
-  if (error.name === 'TimeoutError') return true;
-  if (error.name === 'AbortError') return true;
-  if (error.message?.includes('network') || error.message?.includes('ECONNREFUSED')) return true;
-  if (error.message?.includes('429')) return true;
-  if (error.message?.includes('401') || error.message?.includes('403')) return false;
-  if (error.message?.includes('API error')) return true;
+export function isRetryableError(error: unknown): boolean {
+  const msg = error instanceof Error ? error.message : '';
+  const name = error instanceof Error ? error.name : '';
+  if (name === 'TimeoutError') return true;
+  if (name === 'AbortError') return true;
+  if (msg.includes('network') || msg.includes('ECONNREFUSED')) return true;
+  if (msg.includes('429')) return true;
+  if (msg.includes('401') || msg.includes('403')) return false;
+  if (msg.includes('API error')) return true;
   return false;
 }
 
-export function getRetryDelay(error: any): number {
-  if (error.message?.includes('429')) return 5000;
+export function getRetryDelay(error: unknown): number {
+  const msg = error instanceof Error ? error.message : '';
+  if (msg.includes('429')) return 5000;
   return 0;
 }
 
@@ -151,7 +154,12 @@ export async function extractResume(
     validationLevel: 'standard' as const,
   };
 
-  const cacheKey = `${(pdfBase64 || text).substring(0, 100)}-${strat.promptType}`;
+  const source = pdfBase64 || text;
+  let hash = 0;
+  for (let i = 0; i < source.length; i++) {
+    hash = ((hash << 5) - hash + source.charCodeAt(i)) | 0;
+  }
+  const cacheKey = `${hash.toString(36)}-${source.length}-${strat.promptType}`;
   return config.deduplicateRequest(cacheKey, async () => {
     for (let attempt = 0; attempt <= strat.maxRetries; attempt++) {
       try {
@@ -164,7 +172,7 @@ export async function extractResume(
         if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay));
         config.log('debug', 'Retrying LLM request', {
           attempt,
-          error: (error as Error).message,
+          error: error instanceof Error ? error.message : 'Unknown error',
           delay,
         });
       }
@@ -201,20 +209,7 @@ async function extractWithTimeout(
 
     const prompt = config.getPrompt(strategy.promptType, strategy.scenario, undefined, lang);
 
-    const userContent =
-      provider === 'claude' && pdfBase64
-        ? [
-            {
-              type: 'document' as const,
-              source: {
-                type: 'base64' as const,
-                media_type: 'application/pdf' as const,
-                data: pdfBase64,
-              },
-            },
-            { type: 'text' as const, text: prompt },
-          ]
-        : `${prompt}\n\n简历文本：\n${text}`;
+    const userContent = `${prompt}\n\n简历文本：\n${text}`;
 
     const response = await fetch(providerConfig.url, {
       signal: controller.signal,
@@ -248,8 +243,8 @@ async function extractWithTimeout(
     config.onResponse?.(parsed, data, providerConfig.model, lang);
 
     return parsed;
-  } catch (error: any) {
-    if (error.name === 'AbortError') {
+  } catch (error: unknown) {
+    if (error instanceof Error && error.name === 'AbortError') {
       throw config.createTimeoutError(`Request timeout after ${strategy.timeout}ms`);
     }
     throw error;

@@ -30,7 +30,7 @@ export function exportReportToPdf(data: ReportPdfData): void {
     doc.text('成本概览', 14, y);
     y += 4;
 
-    (doc as any).autoTable({
+    doc.autoTable({
       startY: y,
       head: [['指标', '值']],
       body: [
@@ -46,7 +46,7 @@ export function exportReportToPdf(data: ReportPdfData): void {
       styles: { fontSize: 10 },
     });
 
-    y = (doc as any).lastAutoTable.finalY + 12;
+    y = doc.lastAutoTable.finalY + 12;
   }
 
   // Field accuracy table
@@ -58,7 +58,7 @@ export function exportReportToPdf(data: ReportPdfData): void {
     doc.text('字段准确率', 14, y);
     y += 4;
 
-    (doc as any).autoTable({
+    doc.autoTable({
       startY: y,
       head: [['字段', '准确率', '匹配类型']],
       body: fieldEntries.map(([field, info]) => [
@@ -71,7 +71,7 @@ export function exportReportToPdf(data: ReportPdfData): void {
       styles: { fontSize: 10 },
     });
 
-    y = (doc as any).lastAutoTable.finalY + 12;
+    y = doc.lastAutoTable.finalY + 12;
   }
 
   // Error patterns table
@@ -83,7 +83,7 @@ export function exportReportToPdf(data: ReportPdfData): void {
     y += 4;
 
     const maxCount = data.errors[0]?.count || 1;
-    (doc as any).autoTable({
+    doc.autoTable({
       startY: y,
       head: [['字段', '缺失次数', '类型', '占比']],
       body: data.errors.map(e => [
@@ -97,7 +97,7 @@ export function exportReportToPdf(data: ReportPdfData): void {
       styles: { fontSize: 10 },
     });
 
-    y = (doc as any).lastAutoTable.finalY + 12;
+    y = doc.lastAutoTable.finalY + 12;
   }
 
   // Distribution summary
@@ -117,7 +117,7 @@ export function exportReportToPdf(data: ReportPdfData): void {
     for (const [title, dist] of distSections) {
       if (y > 260) { doc.addPage(); y = 20; }
 
-      (doc as any).autoTable({
+      doc.autoTable({
         startY: y,
         head: [[title, '数量']],
         body: Object.entries(dist).map(([k, v]) => [k, String(v)]),
@@ -126,7 +126,7 @@ export function exportReportToPdf(data: ReportPdfData): void {
         styles: { fontSize: 10 },
       });
 
-      y = (doc as any).lastAutoTable.finalY + 8;
+      y = doc.lastAutoTable.finalY + 8;
     }
   }
 
@@ -138,7 +138,7 @@ export function exportReportToPdf(data: ReportPdfData): void {
     doc.text('趋势数据', 14, y);
     y += 4;
 
-    (doc as any).autoTable({
+    doc.autoTable({
       startY: y,
       head: [['日期', '准确率', '文件数']],
       body: data.trends.map(t => [

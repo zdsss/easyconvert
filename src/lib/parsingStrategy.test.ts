@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getStrategy } from './parsingStrategy';
+import { getStrategy } from '@shared/parsingStrategy';
 
 describe('parsingStrategy', () => {
   it('returns basic strategy for easy+basic', () => {

@@ -51,7 +51,7 @@ export async function parseDocxFromArrayBuffer(arrayBuffer: ArrayBuffer): Promis
     try {
       return extractTextFallback(arrayBuffer);
     } catch (fallbackError) {
-      throw new Error(`DOCX文件格式错误或已损坏: ${(fallbackError as Error).message}`);
+      throw new Error(`DOCX文件格式错误或已损坏: ${fallbackError instanceof Error ? fallbackError.message : 'Unknown error'}`);
     }
   }
 }

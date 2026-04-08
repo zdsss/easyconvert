@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import pool from '../db';
+import { serverLogger } from '../lib/logger';
 
 const router = Router();
 
@@ -42,7 +43,8 @@ router.post('/:taskId/annotations', async (req, res) => {
     );
     res.json(result.rows[0]);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    serverLogger.error('Failed to save annotation', error instanceof Error ? error : new Error(String(error)));
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 
@@ -96,7 +98,8 @@ router.post('/:taskId/annotations/batch', async (req, res) => {
 
     res.json(results);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    serverLogger.error('Failed to save batch annotations', error instanceof Error ? error : new Error(String(error)));
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 

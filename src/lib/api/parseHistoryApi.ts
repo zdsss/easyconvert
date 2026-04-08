@@ -7,7 +7,7 @@ export interface ParseHistoryItem {
   file_hash: string | null;
   file_size: number;
   mime_type: string;
-  result: any;
+  result: unknown;
   error: string | null;
   processing_time: number | null;
   created_at: string;
@@ -43,7 +43,7 @@ export const parseHistoryApi = {
     fileSize?: number;
     mimeType?: string;
     status: string;
-    result?: any;
+    result?: unknown;
     error?: string;
     processingTime?: number;
   }): Promise<ParseHistoryItem> {

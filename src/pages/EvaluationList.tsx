@@ -14,7 +14,7 @@ function adaptTaskResponse(task: TaskResponse): EvaluationTask {
   return {
     ...task,
     type: (task.type as 'single' | 'batch') || 'single',
-    config: task.config as any || { enableFieldLevel: false, enableClassification: false, enableProcessTrace: false, accuracyMethod: 'exact' },
+    config: task.config || { enableFieldLevel: false, enableClassification: false, enableProcessTrace: false, accuracyMethod: 'exact' as const },
     stats: task.stats || { totalFiles: 0, processedFiles: 0, successCount: 0, failureCount: 0 },
     createdAt: new Date(task.createdAt),
     updatedAt: new Date(task.updatedAt || task.createdAt)
@@ -48,7 +48,7 @@ export default function EvaluationList() {
       const data = await evaluationApi.getTasks();
       setTasks(Array.isArray(data) ? data.map(adaptTaskResponse) : []);
     } catch (error) {
-      logger.error('Failed to load tasks', error as Error);
+      logger.error('Failed to load tasks', error instanceof Error ? error : new Error(String(error)));
       setTasks([]);
     } finally {
       setLoading(false);

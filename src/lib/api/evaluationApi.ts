@@ -1,9 +1,9 @@
-import { TaskResponse, EvaluationResult } from '../types';
+import type { TaskResponse, EvaluationResult, EvaluationConfig, Resume } from '../types';
 
 const API_BASE = '/api';
 
 export const evaluationApi = {
-  async createTask(data: { name: string; description?: string; type: string; config: any }): Promise<TaskResponse> {
+  async createTask(data: { name: string; description?: string; type: string; config: EvaluationConfig }): Promise<TaskResponse> {
     const res = await fetch(`${API_BASE}/evaluations`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -16,7 +16,9 @@ export const evaluationApi = {
   },
 
   async getTasks(params?: { page?: number; limit?: number; status?: string }): Promise<TaskResponse[]> {
-    const query = new URLSearchParams(params as any).toString();
+    const query = new URLSearchParams(
+      Object.entries(params ?? {}).filter(([, v]) => v != null) as [string, string][]
+    ).toString();
     const res = await fetch(`${API_BASE}/evaluations?${query}`);
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}: ${await res.text()}`);
@@ -32,7 +34,7 @@ export const evaluationApi = {
     return res.json();
   },
 
-  async updateTask(id: string, data: { status?: string; stats?: any }): Promise<TaskResponse> {
+  async updateTask(id: string, data: { status?: string; stats?: Record<string, number> }): Promise<TaskResponse> {
     const res = await fetch(`${API_BASE}/evaluations/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -64,7 +66,7 @@ export const evaluationApi = {
     return res.json();
   },
 
-  async saveAnnotation(taskId: string, resultId: string, annotation: any): Promise<void> {
+  async saveAnnotation(taskId: string, resultId: string, annotation: Resume): Promise<void> {
     const res = await fetch(`${API_BASE}/annotations/${taskId}/annotations`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

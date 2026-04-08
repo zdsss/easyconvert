@@ -64,14 +64,14 @@ export default function EvaluationNew() {
         config: formData.config,
       });
       navigate(`/evaluation/${task.id}`);
-    } catch (err) {
-      logger.error('Failed to create task', err as Error);
+    } catch (err: unknown) {
+      logger.error('Failed to create task', err instanceof Error ? err : new Error(String(err)));
       setError(err instanceof Error ? err.message : '创建失败，请确保后端服务已启动');
       setCreating(false);
     }
   };
 
-  const updateConfig = (key: string, value: any) => {
+  const updateConfig = (key: string, value: boolean | string | number) => {
     setFormData({ ...formData, config: { ...formData.config, [key]: value } });
   };
 
@@ -205,7 +205,7 @@ export default function EvaluationNew() {
                 <label key={opt.key} className="flex items-start gap-3 p-3 rounded-lg hover:bg-surface-tertiary transition-colors cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={(formData.config as any)[opt.key]}
+                    checked={formData.config[opt.key as keyof typeof formData.config] as boolean}
                     onChange={e => updateConfig(opt.key, e.target.checked)}
                     className="mt-0.5 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
                   />

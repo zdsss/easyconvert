@@ -4,8 +4,18 @@ import { serverLogger } from '../lib/logger';
 
 const router = Router();
 
+interface FlywheelCandidate {
+  id: string;
+  fileName: string;
+  fileSize: number;
+  avgConfidence: number;
+  qualityScore: number | null;
+  language: string | null;
+  createdAt: string;
+}
+
 /** Parse a row's result JSON and extract confidence/quality/language metadata */
-function extractCandidate(row: any) {
+function extractCandidate(row: any): FlywheelCandidate | null {
   let parsed = row.result;
   if (typeof parsed === 'string') {
     try { parsed = JSON.parse(parsed); } catch { parsed = null; }
@@ -53,14 +63,15 @@ router.get('/', async (req: Request, res: Response) => {
 
     const candidates = result.rows
       .map((row: any) => extractCandidate(row))
-      .filter((c: any) => c !== null)
-      .filter((c: any) => c.avgConfidence < threshold)
-      .sort((a: any, b: any) => a.avgConfidence - b.avgConfidence);
+      .filter((c): c is FlywheelCandidate => c !== null)
+      .filter((c) => c.avgConfidence < threshold)
+      .sort((a, b) => a.avgConfidence - b.avgConfidence);
 
     res.json({ candidates, total: candidates.length });
-  } catch (error) {
-    serverLogger.error('Failed to fetch flywheel candidates', error as Error);
-    res.status(500).json({ error: (error as Error).message });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    serverLogger.error('Failed to fetch flywheel candidates', error instanceof Error ? error : new Error(String(error)));
+    res.status(500).json({ error: message });
   }
 });
 
@@ -88,9 +99,10 @@ router.post('/promote', async (req: Request, res: Response) => {
       evaluationTaskId: row.evaluation_task_id,
       promotedAt: row.promoted_at,
     });
-  } catch (error) {
-    serverLogger.error('Failed to promote candidate', error as Error);
-    res.status(500).json({ error: (error as Error).message });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    serverLogger.error('Failed to promote candidate', error instanceof Error ? error : new Error(String(error)));
+    res.status(500).json({ error: message });
   }
 });
 
@@ -109,19 +121,19 @@ router.get('/stats', async (_req: Request, res: Response) => {
 
     const allCandidates = result.rows
       .map((row: any) => extractCandidate(row))
-      .filter((c: any) => c !== null);
+      .filter((c): c is FlywheelCandidate => c !== null);
 
-    const belowThreshold = allCandidates.filter((c: any) => c.avgConfidence < 0.75);
+    const belowThreshold = allCandidates.filter((c) => c.avgConfidence < 0.75);
 
     const avgConfidence = allCandidates.length > 0
       ? Math.round(
-          (allCandidates.reduce((sum: number, c: any) => sum + c.avgConfidence, 0) / allCandidates.length) * 1000
+          (allCandidates.reduce((sum, c) => sum + c.avgConfidence, 0) / allCandidates.length) * 1000
         ) / 1000
       : 0;
 
     const languageDistribution: Record<string, number> = {};
     for (const c of allCandidates) {
-      const lang = (c as any).language || 'unknown';
+      const lang = c.language || 'unknown';
       languageDistribution[lang] = (languageDistribution[lang] || 0) + 1;
     }
 
@@ -130,9 +142,10 @@ router.get('/stats', async (_req: Request, res: Response) => {
       avgConfidence,
       languageDistribution,
     });
-  } catch (error) {
-    serverLogger.error('Failed to fetch flywheel stats', error as Error);
-    res.status(500).json({ error: (error as Error).message });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    serverLogger.error('Failed to fetch flywheel stats', error instanceof Error ? error : new Error(String(error)));
+    res.status(500).json({ error: message });
   }
 });
 

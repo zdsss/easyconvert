@@ -1,12 +1,14 @@
 import { TimeoutError } from '@lib/types';
 import type { Resume } from '@lib/types';
-import type { ParsingStrategy } from '@lib/parsingStrategy';
-import { getPrompt } from '@lib/prompts';
+import type { ParsingStrategy } from '@shared/parsingStrategy';
+import { getPrompt } from '@shared/prompts';
+import type { PromptType, Scenario } from '@shared/prompts';
 import { detectLanguage } from './detectLanguage';
-import { deduplicateRequest } from '@lib/llmCache';
+import { deduplicateRequest } from '@shared/llmCache';
 import { logger } from '@lib/logger';
+import { createLogFn } from '@shared/logger';
 import { costTracker } from '@lib/monitoring/cost';
-import { circuitBreaker } from '@lib/circuitBreaker';
+import { circuitBreaker } from '@shared/circuitBreaker';
 import {
   extractResume as coreExtractResume,
   isRetryableError,
@@ -33,8 +35,8 @@ const envConfig: ExtractEnvConfig = {
   getProvider: () => import.meta.env.VITE_LLM_PROVIDER || 'qwen',
   getApiKey: (provider) => import.meta.env[`VITE_${provider.toUpperCase()}_API_KEY`],
   getPrompt: (promptType, scenario, _template, lang) =>
-    getPrompt(promptType as any, (scenario as any) || 'general', undefined, (lang as any) || 'zh'),
-  log: (level, msg, meta) => (logger as any)[level](msg, meta),
+    getPrompt(promptType as PromptType, scenario as Scenario || 'general', undefined, (lang || 'zh') as 'zh' | 'en' | 'ja'),
+  log: createLogFn(logger),
   deduplicateRequest: (key, fn) => deduplicateRequest(key, fn),
   circuitBreakerExecute: (fn) => circuitBreaker.execute(fn),
   createTimeoutError: (message) => new TimeoutError(message),
@@ -42,8 +44,7 @@ const envConfig: ExtractEnvConfig = {
   onResponse: (parsed, data, model, lang) => {
     // Cost tracking
     if (data.usage) {
-      costTracker.setModel(model);
-      costTracker.record(data.usage.prompt_tokens || 0, data.usage.completion_tokens || 0);
+      costTracker.record(model, data.usage.prompt_tokens || 0, data.usage.completion_tokens || 0);
     }
     // Confidence extraction
     const confidenceMap = extractConfidence(parsed as Record<string, unknown>);

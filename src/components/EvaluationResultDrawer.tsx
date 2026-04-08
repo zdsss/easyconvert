@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { EvaluationResult } from '@lib/types';
+import type { EvaluationResult, Resume } from '@lib/types';
 import Drawer from './ui/Drawer';
 import ComparisonView from './ComparisonView';
 import ProcessTimeline from './ProcessTimeline';
@@ -8,8 +8,8 @@ import Icon from './ui/Icon';
 interface Props {
   result: EvaluationResult | null;
   onClose: () => void;
-  onSaveAnnotation?: (annotation: any) => void;
-  prefillData?: Record<string, any>;
+  onSaveAnnotation?: (annotation: unknown) => void;
+  prefillData?: Resume;
   confidenceData?: Record<string, number>;
 }
 
@@ -101,7 +101,7 @@ function ParsedTab({ result }: { result: EvaluationResult }) {
             工作经历（{r.work.length} 段）
           </div>
           <div className="space-y-2">
-            {r.work.map((w: any, i: number) => (
+            {r.work.map((w, i) => (
               <div key={i} className="p-3 bg-surface-secondary rounded-lg">
                 <p className="text-sm font-medium text-text-primary">{w.company} · {w.position}</p>
                 <p className="text-xs text-text-tertiary">{w.startDate} ~ {w.endDate || '至今'}</p>
@@ -118,7 +118,7 @@ function ParsedTab({ result }: { result: EvaluationResult }) {
             教育背景（{r.education.length} 段）
           </div>
           <div className="space-y-2">
-            {r.education.map((e: any, i: number) => (
+            {r.education.map((e, i) => (
               <div key={i} className="p-3 bg-surface-secondary rounded-lg">
                 <p className="text-sm font-medium text-text-primary">{e.institution || e.school}</p>
                 <p className="text-xs text-text-secondary">{e.degree} · {e.major || '-'}</p>
@@ -162,14 +162,21 @@ function ConfidenceBadge({ score }: { score?: number }) {
 
 function CompareTab({ result, onSaveAnnotation, prefillData, confidenceData }: {
   result: EvaluationResult;
-  onSaveAnnotation?: (annotation: any) => void;
-  prefillData?: Record<string, any>;
+  onSaveAnnotation?: (annotation: unknown) => void;
+  prefillData?: Resume;
   confidenceData?: Record<string, number>;
 }) {
-  const [annotation, setAnnotation] = useState<any>(() => {
-    if (result.annotation && Object.keys(result.annotation).length > 0) return result.annotation;
-    if (prefillData?.basics) return { basics: { ...prefillData.basics } };
-    return {};
+  const [annotation, setAnnotation] = useState<Record<string, Record<string, string>>>(() => {
+    if (result.annotation && Object.keys(result.annotation).length > 0) {
+      const a = result.annotation;
+      return {
+        basics: { name: a.basics?.name || '', phone: a.basics?.phone || '', email: a.basics?.email || '' },
+      };
+    }
+    if (prefillData?.basics) {
+      return { basics: { name: prefillData.basics.name, phone: prefillData.basics.phone, email: prefillData.basics.email } };
+    }
+    return {} as Record<string, Record<string, string>>;
   });
 
   if (!result.annotation && !result.parsedResume) {

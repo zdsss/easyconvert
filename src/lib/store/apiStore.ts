@@ -27,7 +27,7 @@ export const useApiStore = create<ApiState>((set, get) => ({
       const keys = await apiManagementApi.getKeys(tenantId);
       set({ keys, isLoading: false });
     } catch (e) {
-      set({ isLoading: false, error: (e as Error).message });
+      set({ isLoading: false, error: e instanceof Error ? e.message : 'Unknown error' });
     }
   },
 
@@ -48,7 +48,7 @@ export const useApiStore = create<ApiState>((set, get) => ({
       const overview = await apiManagementApi.getApiOverview(tenantId);
       set({ overview, isLoading: false });
     } catch (e) {
-      set({ isLoading: false, error: (e as Error).message });
+      set({ isLoading: false, error: e instanceof Error ? e.message : 'Unknown error' });
     }
   },
 
@@ -58,7 +58,7 @@ export const useApiStore = create<ApiState>((set, get) => ({
       const usage = await apiManagementApi.getUsageStats(tenantId, days);
       set({ usage, isLoading: false });
     } catch (e) {
-      set({ isLoading: false, error: (e as Error).message });
+      set({ isLoading: false, error: e instanceof Error ? e.message : 'Unknown error' });
     }
   },
 }));

@@ -1,4 +1,4 @@
-import { setMaxConcurrency, getQueueStatus } from './concurrency';
+import { setMaxConcurrency, getQueueStatus } from '@shared/concurrency';
 import { logger } from './logger';
 
 class AdaptiveConcurrency {

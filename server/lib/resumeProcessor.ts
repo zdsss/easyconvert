@@ -4,9 +4,10 @@ import { extractResume } from './extractWithLLM';
 import { hashFile } from './hashFile';
 import { getCached, setCache } from './cache';
 import { serverLogger } from './logger';
+import { createLogFn } from '@shared/logger';
 import { hashResume, checkDuplicate, registerResult } from './dedup';
 import type { ServerFileInput } from './types';
-import type { Resume, CacheData } from '@shared/types';
+import type { Resume, CacheData, ContentClassification, ValidationResult } from '@shared/types';
 import type { StageName } from '@shared/processTracer';
 
 import { classifyResume } from '@shared/classifiers';
@@ -22,16 +23,16 @@ export interface ServerProcessOptions {
   enableCache?: boolean;
   enableClassification?: boolean;
   enableValidation?: boolean;
-  onStageComplete?: (stage: StageName, data?: any) => void;
+  onStageComplete?: (stage: StageName, data?: unknown) => void;
 }
 
 export interface ServerProcessResult {
   resume: Resume;
-  classification?: any;
+  classification?: ContentClassification;
   difficultyClass?: string;
   fromCache: boolean;
   hash: string;
-  validation?: any;
+  validation?: ValidationResult;
   attempts?: number;
   finalStrategy?: string;
   duplicate?: boolean;
@@ -57,7 +58,7 @@ function createServerAdapter(file: ServerFileInput): PipelineAdapter {
       registerResult(rHash, hashFile(file.buffer));
       return null;
     },
-    log: (level, msg, meta) => (serverLogger as any)[level]?.(msg, meta),
+    log: createLogFn(serverLogger),
   };
 }
 

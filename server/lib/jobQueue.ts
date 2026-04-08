@@ -34,7 +34,7 @@ class JobQueue {
       job.status = 'completed';
     } catch (error) {
       job.status = 'failed';
-      serverLogger.error('Job failed', error as Error, { jobId: job.id });
+      serverLogger.error('Job failed', error instanceof Error ? error : new Error(String(error)), { jobId: job.id });
     } finally {
       this.processing--;
       this.processNext();

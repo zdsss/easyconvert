@@ -2,8 +2,27 @@ import db from '../db';
 import { serverLogger } from './logger';
 import { calculateCost, DEFAULT_MODEL } from '@shared/pricing';
 
+interface EvaluationResultRow {
+  id: string;
+  task_id: string;
+  file_name: string;
+  metrics: string | Record<string, number> | null;
+  classification: string | Record<string, string> | null;
+  parsed_resume: string | Record<string, unknown> | null;
+  processing_time: number;
+  from_cache: boolean;
+  error: string | null;
+  created_at: string;
+}
+
+interface TaskRow {
+  id: string;
+  config: string | Record<string, unknown> | null;
+  [key: string]: unknown;
+}
+
 export interface ReportData {
-  task: any;
+  task: TaskRow;
   summary: {
     totalFiles: number;
     successCount: number;
@@ -44,25 +63,25 @@ export async function generateServerReport(taskId: string): Promise<ReportData> 
   const taskResult = await db.query('SELECT * FROM evaluation_tasks WHERE id = $1', [taskId]);
   const resultsResult = await db.query('SELECT * FROM evaluation_results WHERE task_id = $1', [taskId]);
 
-  const task = taskResult.rows[0];
-  const results = resultsResult.rows;
+  const task = taskResult.rows[0] as TaskRow | undefined;
+  const results = resultsResult.rows as EvaluationResultRow[];
 
   if (!task) throw new Error('Task not found');
 
-  const successResults = results.filter((r: any) => !r.error);
-  const failedResults = results.filter((r: any) => r.error);
+  const successResults = results.filter((r) => !r.error);
+  const failedResults = results.filter((r) => r.error);
 
   // 基础汇总
   const summary = {
     totalFiles: results.length,
     successCount: successResults.length,
     failureCount: failedResults.length,
-    avgAccuracy: avg(successResults, (r: any) => parseMetric(r.metrics, 'accuracy')),
-    avgCompleteness: avg(successResults, (r: any) => parseMetric(r.metrics, 'completeness')),
-    avgStructureScore: avg(successResults, (r: any) => parseMetric(r.metrics, 'structureScore')),
-    avgProcessingTime: avg(successResults, (r: any) => r.processing_time),
+    avgAccuracy: avg(successResults, (r) => parseMetric(r.metrics, 'accuracy')),
+    avgCompleteness: avg(successResults, (r) => parseMetric(r.metrics, 'completeness')),
+    avgStructureScore: avg(successResults, (r) => parseMetric(r.metrics, 'structureScore')),
+    avgProcessingTime: avg(successResults, (r) => r.processing_time),
     cacheHitRate: results.length > 0
-      ? (results.filter((r: any) => r.from_cache).length / results.length) * 100
+      ? (results.filter((r) => r.from_cache).length / results.length) * 100
       : 0,
   };
 
@@ -134,10 +153,10 @@ export async function getCostReport(taskId: string) {
   const taskConfig = taskResult.rows[0]?.config;
   const model = (typeof taskConfig === 'string' ? JSON.parse(taskConfig) : taskConfig)?.model || DEFAULT_MODEL;
 
-  const rows = resultsResult.rows;
-  const nonCached = rows.filter((r: any) => !r.from_cache);
+  const rows = resultsResult.rows as EvaluationResultRow[];
+  const nonCached = rows.filter((r) => !r.from_cache);
   const avgTime = nonCached.length > 0
-    ? nonCached.reduce((sum: number, r: any) => sum + r.processing_time, 0) / nonCached.length
+    ? nonCached.reduce((sum, r) => sum + r.processing_time, 0) / nonCached.length
     : 0;
 
   // 粗略估算 token 消耗（基于处理时间），假设 input:output ≈ 3:1
@@ -149,7 +168,7 @@ export async function getCostReport(taskId: string) {
 
   return {
     totalFiles: rows.length,
-    cachedFiles: rows.filter((r: any) => r.from_cache).length,
+    cachedFiles: rows.filter((r) => r.from_cache).length,
     totalTokens,
     estimatedCost: totalCost,
     avgTokensPerFile: estimatedTokensPerFile,
@@ -160,18 +179,18 @@ export async function getCostReport(taskId: string) {
 
 // --- Helpers ---
 
-function parseMetric(metrics: any, field: string): number {
+function parseMetric(metrics: string | Record<string, number> | null, field: string): number {
   if (!metrics) return 0;
   const m = typeof metrics === 'string' ? JSON.parse(metrics) : metrics;
   return m[field] || 0;
 }
 
-function avg(arr: any[], fn: (item: any) => number): number {
+function avg<T>(arr: T[], fn: (item: T) => number): number {
   if (arr.length === 0) return 0;
   return arr.reduce((sum, item) => sum + fn(item), 0) / arr.length;
 }
 
-function buildDistribution(results: any[]) {
+function buildDistribution(results: EvaluationResultRow[]) {
   const difficulty: Record<string, number> = {};
   const completeness: Record<string, number> = {};
   const scenario: Record<string, number> = {};
@@ -188,7 +207,7 @@ function buildDistribution(results: any[]) {
   return { difficulty, completeness, scenario };
 }
 
-function buildErrorPatterns(failedResults: any[]) {
+function buildErrorPatterns(failedResults: EvaluationResultRow[]) {
   const patterns = new Map<string, { count: number; examples: string[] }>();
 
   for (const r of failedResults) {
@@ -213,7 +232,7 @@ function buildErrorPatterns(failedResults: any[]) {
   }));
 }
 
-function analyzeErrors(results: any[]) {
+function analyzeErrors(results: EvaluationResultRow[]) {
   const issues: Array<{ field: string; count: number; type: string }> = [];
   const fieldMissing = new Map<string, number>();
 

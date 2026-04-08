@@ -20,6 +20,13 @@ import type { Resume } from '@shared/types';
 // Frontend-only types (not shared with server)
 // ---------------------------------------------------------------------------
 
+export interface EvaluationConfig {
+  enableFieldLevel: boolean;
+  enableClassification: boolean;
+  enableProcessTrace: boolean;
+  accuracyMethod: 'exact' | 'partial' | 'semantic';
+}
+
 export interface TaskResponse {
   id: string;
   name: string;
@@ -27,7 +34,7 @@ export interface TaskResponse {
   createdAt: string;
   description?: string;
   type?: string;
-  config?: Record<string, unknown>;
+  config?: EvaluationConfig;
   stats?: {
     totalFiles: number;
     processedFiles: number;
@@ -41,6 +48,7 @@ export interface EvaluationMetrics {
   accuracy: number;
   completeness: number;
   structureScore: number;
+  fieldMetrics?: Record<string, number>;
 }
 
 export interface EvaluationResult {
@@ -51,11 +59,15 @@ export interface EvaluationResult {
   parsedResume: Resume;
   annotation?: Resume | null;
   classification?: {
-    difficulty: 'easy' | 'standard' | 'hard';
-    completeness: 'basic' | 'complete' | 'rich';
-    scenario: 'fresh' | 'tech' | 'executive' | 'general';
+    difficulty?: 'easy' | 'standard' | 'hard';
+    completeness?: 'basic' | 'complete' | 'rich';
+    scenario?: 'fresh' | 'tech' | 'executive' | 'general';
+    structure?: 'simple' | 'standard' | 'complete';
+    detail?: 'brief' | 'normal' | 'detailed';
+    modules?: string[];
+    category?: string;
   };
-  processTrace?: any;
+  processTrace?: { stages: Array<{ name: string; status: string; duration?: number; error?: string }>; totalDuration: number };
   metrics: EvaluationMetrics;
   processingTime: number;
   fromCache: boolean;

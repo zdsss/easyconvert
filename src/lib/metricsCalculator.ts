@@ -3,8 +3,8 @@ import type { Resume } from './types';
 export interface FieldMetric {
   accuracy: number;
   matchType: 'exact' | 'partial' | 'semantic' | 'missing' | 'incorrect';
-  expected?: any;
-  actual?: any;
+  expected?: unknown;
+  actual?: unknown;
   similarity?: number;
 }
 
@@ -28,16 +28,15 @@ export interface EvaluationMetrics {
   };
 }
 
-function getValueByPath(obj: any, path: string): any {
-  return path.split('.').reduce((curr, key) => curr?.[key], obj);
-}
+import { getValueByPath } from './utils';
 
-function getAllFieldPaths(obj: any, prefix = ''): string[] {
+function getAllFieldPaths(obj: unknown, prefix = ''): string[] {
   const paths: string[] = [];
+  if (!obj || typeof obj !== 'object') return paths;
 
-  for (const key in obj) {
+  for (const key in obj as Record<string, unknown>) {
     const path = prefix ? `${prefix}.${key}` : key;
-    const value = obj[key];
+    const value = (obj as Record<string, unknown>)[key];
 
     if (value && typeof value === 'object' && !Array.isArray(value)) {
       paths.push(...getAllFieldPaths(value, path));

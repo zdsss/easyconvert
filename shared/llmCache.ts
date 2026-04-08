@@ -12,7 +12,3 @@ export function deduplicateRequest<T>(key: string, fn: () => Promise<T>): Promis
   requestCache.set(key, promise);
   return promise;
 }
-
-export function clearCache() {
-  requestCache.clear();
-}

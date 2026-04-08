@@ -45,7 +45,7 @@ describe('extractResume', () => {
     });
 
     await extractResume('test resume text');
-    expect(recordSpy).toHaveBeenCalledWith(100, 50);
+    expect(recordSpy).toHaveBeenCalledWith('qwen-plus', 100, 50);
   });
 
   it('throws on non-ok HTTP status', async () => {

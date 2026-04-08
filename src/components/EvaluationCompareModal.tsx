@@ -17,7 +17,7 @@ interface FieldAvg {
 function aggregateFieldMetrics(results: EvaluationResult[]): Record<string, number[]> {
   const map: Record<string, number[]> = {};
   for (const r of results) {
-    const fm = (r as any).metrics?.fieldMetrics;
+    const fm = r.metrics?.fieldMetrics;
     if (!fm) continue;
     for (const [field, val] of Object.entries(fm)) {
       if (!map[field]) map[field] = [];

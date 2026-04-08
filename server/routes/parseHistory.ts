@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import db from '../db';
+import { serverLogger } from '../lib/logger';
 
 const router = Router();
 
@@ -42,7 +43,7 @@ router.get('/', async (req: Request, res: Response) => {
     const search = req.query.search as string | undefined;
 
     let where = 'WHERE tenant_id IS NULL';
-    const params: any[] = [];
+    const params: (string | number)[] = [];
     let paramIdx = 1;
 
     if (status && ['completed', 'failed', 'processing', 'pending'].includes(status)) {
@@ -70,7 +71,8 @@ router.get('/', async (req: Request, res: Response) => {
 
     res.json({ items: dataResult.rows, total, page, limit });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    serverLogger.error('Failed to list parse history', error instanceof Error ? error : new Error(String(error)));
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 
@@ -106,7 +108,8 @@ router.get('/:id', async (req: Request, res: Response) => {
     }
     res.json(row);
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    serverLogger.error('Failed to get parse history', error instanceof Error ? error : new Error(String(error)));
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 
@@ -134,7 +137,8 @@ router.post('/', async (req: Request, res: Response) => {
     }
     res.status(201).json(row);
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    serverLogger.error('Failed to save parse history', error instanceof Error ? error : new Error(String(error)));
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 
@@ -161,7 +165,8 @@ router.delete('/:id', async (req: Request, res: Response) => {
     await db.query('DELETE FROM parse_jobs WHERE id = $1 AND tenant_id IS NULL', [req.params.id]);
     res.json({ success: true });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    serverLogger.error('Failed to delete parse history', error instanceof Error ? error : new Error(String(error)));
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 
@@ -182,7 +187,8 @@ router.delete('/', async (_req: Request, res: Response) => {
     await db.query('DELETE FROM parse_jobs WHERE tenant_id IS NULL');
     res.json({ success: true });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    serverLogger.error('Failed to clear parse history', error instanceof Error ? error : new Error(String(error)));
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 

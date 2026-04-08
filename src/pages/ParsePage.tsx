@@ -68,9 +68,9 @@ export default function ParsePage() {
         result: result.resume,
         processingTime: Date.now() - startTime,
       }).catch(() => {});
-    } catch (err) {
+    } catch (err: unknown) {
       recordFailure();
-      const message = (err as Error).message;
+      const message = err instanceof Error ? err.message : 'Unknown error';
       if (message.includes('格式错误或已损坏')) setError('文件格式错误或已损坏');
       else if (message.includes('超时') || message.includes('timeout')) setError('处理超时，请重试');
       else setError(message);

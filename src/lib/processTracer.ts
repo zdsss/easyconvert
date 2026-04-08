@@ -11,7 +11,7 @@ export interface ProcessStage {
   endTime?: Date;
   duration?: number;
   error?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ProcessTrace {
@@ -30,7 +30,7 @@ export class ProcessTracer {
     });
   }
 
-  completeStage(name: StageName, metadata?: any) {
+  completeStage(name: StageName, metadata?: Record<string, unknown>) {
     const stage = this.stages.find(s => s.name === name);
     if (stage) {
       stage.status = 'completed';

@@ -1,4 +1,4 @@
-import type { Resume, StageName } from './types';
+import type { Resume, StageName, ContentClassification, ResumeClassification, ParsingStrategy, ValidationResult } from './types';
 
 export type { Resume, StageName };
 
@@ -7,37 +7,37 @@ export type { Resume, StageName };
 // ---------------------------------------------------------------------------
 export interface PipelineAdapter {
   hashFile(): Promise<string> | string;
-  getCached(hash: string): Promise<{ resume: Resume; contentClass?: any } | null>;
-  setCache(hash: string, data: { resume: Resume; contentClass?: any; timestamp: number }): Promise<void>;
+  getCached(hash: string): Promise<{ resume: Resume; contentClass?: ContentClassification } | null>;
+  setCache(hash: string, data: { resume: Resume; contentClass?: ContentClassification; timestamp: number }): Promise<void>;
   parseText(fileName: string): Promise<string>;
-  extractResume(text: string, strategy: any): Promise<Resume>;
-  classifyResume(text: string): any;
-  getStrategy(classification: any): any;
-  classifyContent(resume: Resume, text: string): any;
-  validateWithZod(resume: Resume, level: 'basic' | 'standard' | 'strict'): any;
+  extractResume(text: string, strategy: ParsingStrategy): Promise<Resume>;
+  classifyResume(text: string): ResumeClassification;
+  getStrategy(classification: ResumeClassification): ParsingStrategy;
+  classifyContent(resume: Resume, text: string): ContentClassification;
+  validateWithZod(resume: Resume, level: 'basic' | 'standard' | 'strict'): ValidationResult;
   runWithLimit<T>(fn: () => Promise<T>): Promise<T>;
   // Optional hooks
   onCacheHit?(cacheTime: number): void;
   onCacheMiss?(cacheTime: number): void;
   onComplete?(time: number, fromCache: boolean): void;
   onResumeExtracted?(resume: Resume): { duplicate: boolean; existingId?: string } | null;
-  log?(level: string, msg: string, meta?: any): void;
+  log?(level: string, msg: string, meta?: Record<string, unknown>): void;
 }
 
 export interface PipelineOptions {
   enableCache?: boolean;
   enableClassification?: boolean;
   enableValidation?: boolean;
-  onStageComplete?: (stage: StageName, data?: any) => void;
+  onStageComplete?: (stage: StageName, data?: unknown) => void;
 }
 
 export interface PipelineResult {
   resume: Resume;
-  classification?: any;
+  classification?: ContentClassification;
   difficultyClass?: string;
   fromCache: boolean;
   hash: string;
-  validation?: any;
+  validation?: ValidationResult;
   attempts?: number;
   finalStrategy?: string;
   duplicate?: boolean;

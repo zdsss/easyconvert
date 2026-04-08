@@ -32,7 +32,7 @@ export const useParseHistoryStore = create<ParseHistoryState>((set, get) => ({
       const data: ParseHistoryListResponse = await parseHistoryApi.list(p, 20, status, search);
       set({ items: data.items, total: data.total, currentPage: p, isLoading: false });
     } catch (e) {
-      set({ isLoading: false, error: (e as Error).message });
+      set({ isLoading: false, error: e instanceof Error ? e.message : 'Unknown error' });
     }
   },
 
@@ -41,7 +41,7 @@ export const useParseHistoryStore = create<ParseHistoryState>((set, get) => ({
       const item = await parseHistoryApi.get(id);
       set({ selectedItem: item });
     } catch (e) {
-      set({ error: (e as Error).message });
+      set({ error: e instanceof Error ? e.message : 'Unknown error' });
     }
   },
 

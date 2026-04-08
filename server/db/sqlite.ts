@@ -216,8 +216,8 @@ const JSON_COLUMNS = new Set([
   'scopes',
 ]);
 
-function hydrateRow(columns: string[], values: any[]): Record<string, any> {
-  const out: Record<string, any> = {};
+function hydrateRow(columns: string[], values: unknown[]): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
   for (let i = 0; i < columns.length; i++) {
     const key = columns[i];
     const value = values[i];
@@ -232,7 +232,7 @@ function hydrateRow(columns: string[], values: any[]): Record<string, any> {
   return out;
 }
 
-function serializeParam(value: any): any {
+function serializeParam(value: unknown): unknown {
   if (value === undefined) return null;
   if (value === true) return 1;
   if (value === false) return 0;
@@ -247,7 +247,7 @@ function serializeParam(value: any): any {
 // ---------------------------------------------------------------------------
 
 export const sqliteDb = {
-  async query(text: string, params?: any[]): Promise<{ rows: any[]; rowCount: number }> {
+  async query(text: string, params?: unknown[]): Promise<{ rows: Record<string, unknown>[]; rowCount: number }> {
     await dbReady;
 
     const serializedParams = (params || []).map(serializeParam);
@@ -264,7 +264,7 @@ export const sqliteDb = {
     if (trimmed.startsWith('SELECT') || trimmed.startsWith('WITH')) {
       const stmt = db.prepare(rewritten);
       stmt.bind(serializedParams);
-      const rows: any[] = [];
+      const rows: Record<string, unknown>[] = [];
       while (stmt.step()) {
         const columns = stmt.getColumnNames();
         rows.push(hydrateRow(columns, stmt.get()));
@@ -311,7 +311,7 @@ export const sqliteDb = {
       if (hasReturning && table) {
         const lastId = finalParams[0]; // id is always first after our injection
         const selectStmt = db.prepare(`SELECT * FROM ${table} WHERE rowid = last_insert_rowid()`);
-        const rows: any[] = [];
+        const rows: Record<string, unknown>[] = [];
         while (selectStmt.step()) {
           rows.push(hydrateRow(selectStmt.getColumnNames(), selectStmt.get()));
         }
@@ -346,7 +346,7 @@ export const sqliteDb = {
             const placeholders = ids.map((_, i) => `?${i + 1}`).join(', ');
             const fetchStmt = db.prepare(`SELECT * FROM ${table} WHERE id IN (${placeholders})`);
             fetchStmt.bind(ids);
-            const rows: any[] = [];
+            const rows: Record<string, unknown>[] = [];
             while (fetchStmt.step()) { rows.push(hydrateRow(fetchStmt.getColumnNames(), fetchStmt.get())); }
             fetchStmt.free();
             return { rows, rowCount: changes };
@@ -367,7 +367,7 @@ export const sqliteDb = {
         if (table && whereMatch) {
           const fetchStmt = db.prepare(`SELECT * FROM ${table} WHERE ${rewriteSql(whereMatch[1])}`);
           fetchStmt.bind(serializedParams);
-          const rows: any[] = [];
+          const rows: Record<string, unknown>[] = [];
           while (fetchStmt.step()) { rows.push(hydrateRow(fetchStmt.getColumnNames(), fetchStmt.get())); }
           fetchStmt.free();
 

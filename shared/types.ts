@@ -18,9 +18,11 @@ export interface Resume {
     endDate: string;
     responsibilities?: string[];
     achievements?: string[];
+    highlights?: string[];
   }>;
   education: Array<{
     institution: string;
+    school?: string;
     degree: string;
     major?: string;
     startDate: string;
@@ -44,7 +46,7 @@ export interface Resume {
     achievements?: string[];
   }>;
   summary?: string;
-  additional?: Record<string, any>;
+  additional?: Record<string, unknown>;
 }
 
 export type StructureType = 'simple' | 'standard' | 'complete';

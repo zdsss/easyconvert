@@ -28,11 +28,8 @@ function LanguageBadge({ lang }: { lang?: string }) {
   return <span className={`px-1.5 py-0.5 rounded text-xs font-mono font-semibold ${cls}`}>{label}</span>;
 }
 
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
+import { formatSize } from '@lib/utils';
+import type { Resume } from '@lib/types';
 
 function formatTime(ms: number | null): string {
   if (ms == null) return '-';
@@ -166,7 +163,7 @@ export default function ParseHistoryPage() {
                         <div className="flex items-center gap-2">
                           <Icon name="file-text" size={16} className="text-text-tertiary shrink-0" />
                           <span className="font-medium text-text-primary truncate max-w-[200px]">{item.file_name}</span>
-                          <LanguageBadge lang={item.result?.additional?.language} />
+                          <LanguageBadge lang={(item.result as { additional?: { language?: string } } | null)?.additional?.language} />
                         </div>
                       </td>
                       <td className="px-4 py-3">
@@ -180,7 +177,7 @@ export default function ParseHistoryPage() {
                       <td className="px-4 py-3 text-text-secondary text-xs">{new Date(item.created_at).toLocaleString()}</td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1">
-                          {item.result && <Suspense fallback={null}><ExportMenu resume={item.result} /></Suspense>}
+                          {!!item.result && <Suspense fallback={null}><ExportMenu resume={item.result as Resume} /></Suspense>}
                           <button
                             onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}
                             className="btn-ghost p-1 text-text-tertiary hover:text-status-error"

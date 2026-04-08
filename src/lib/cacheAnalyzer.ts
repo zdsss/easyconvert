@@ -14,17 +14,25 @@ class CacheAnalyzer {
   private misses = 0;
   private hitTimes: number[] = [];
   private missTimes: number[] = [];
+  private hitSum = 0;
+  private missSum = 0;
 
   recordHit(time: number) {
     this.hits++;
     this.hitTimes.push(time);
-    if (this.hitTimes.length > MAX_ENTRIES) this.hitTimes.shift();
+    this.hitSum += time;
+    if (this.hitTimes.length > MAX_ENTRIES) {
+      this.hitSum -= this.hitTimes.shift()!;
+    }
   }
 
   recordMiss(time: number) {
     this.misses++;
     this.missTimes.push(time);
-    if (this.missTimes.length > MAX_ENTRIES) this.missTimes.shift();
+    this.missSum += time;
+    if (this.missTimes.length > MAX_ENTRIES) {
+      this.missSum -= this.missTimes.shift()!;
+    }
   }
 
   getStats(): CacheStats {
@@ -34,8 +42,8 @@ class CacheAnalyzer {
       misses: this.misses,
       totalRequests: total,
       hitRate: total > 0 ? this.hits / total : 0,
-      avgHitTime: this.hitTimes.length > 0 ? this.hitTimes.reduce((a, b) => a + b, 0) / this.hitTimes.length : 0,
-      avgMissTime: this.missTimes.length > 0 ? this.missTimes.reduce((a, b) => a + b, 0) / this.missTimes.length : 0
+      avgHitTime: this.hitTimes.length > 0 ? this.hitSum / this.hitTimes.length : 0,
+      avgMissTime: this.missTimes.length > 0 ? this.missSum / this.missTimes.length : 0,
     };
   }
 
@@ -44,6 +52,8 @@ class CacheAnalyzer {
     this.misses = 0;
     this.hitTimes = [];
     this.missTimes = [];
+    this.hitSum = 0;
+    this.missSum = 0;
   }
 }
 

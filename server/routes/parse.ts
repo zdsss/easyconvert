@@ -9,6 +9,25 @@ import type { ServerFileInput } from '../lib/types';
 
 const router = Router();
 
+interface WebhookPayload {
+  jobId: string;
+  status: 'completed' | 'failed';
+  completedAt: string;
+  result?: unknown;
+  error?: string;
+}
+
+interface JobResponse {
+  jobId: string;
+  status: string;
+  fileName: string;
+  createdAt: string;
+  result?: unknown;
+  processingTime?: number;
+  completedAt?: string;
+  error?: string;
+}
+
 /**
  * @openapi
  * /parse:
@@ -66,9 +85,9 @@ router.post('/', async (req: AuthenticatedRequest, res) => {
         validation: result.validation,
       },
     });
-  } catch (error) {
-    serverLogger.error('Parse failed', error as Error);
-    res.status(500).json({ error: (error as Error).message });
+  } catch (error: unknown) {
+    serverLogger.error('Parse failed', error instanceof Error ? error : new Error(String(error)));
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 
@@ -141,7 +160,7 @@ router.post('/async', async (req: AuthenticatedRequest, res) => {
         const startTime = Date.now();
 
         let finalStatus: 'completed' | 'failed' = 'completed';
-        let jobResult: any = null;
+        let jobResult: unknown = null;
         let jobError: string | null = null;
 
         try {
@@ -153,7 +172,8 @@ router.post('/async', async (req: AuthenticatedRequest, res) => {
           );
         } catch (error) {
           finalStatus = 'failed';
-          jobError = (error as Error).message;
+          jobError = error instanceof Error ? error.message : 'Unknown error';
+          serverLogger.error('Async job failed', error instanceof Error ? error : new Error(String(error)), { jobId: job.id });
           await db.query(
             `UPDATE parse_jobs SET status = $1, error = $2, completed_at = NOW() WHERE id = $3`,
             ['failed', jobError, job.id]
@@ -162,7 +182,7 @@ router.post('/async', async (req: AuthenticatedRequest, res) => {
 
         // Deliver webhook if configured
         if (webhookUrl) {
-          const payload: any = {
+          const payload: WebhookPayload = {
             jobId: job.id,
             status: finalStatus,
             completedAt: new Date().toISOString(),
@@ -188,9 +208,9 @@ router.post('/async', async (req: AuthenticatedRequest, res) => {
       status: 'pending',
       message: 'Job queued for processing',
     });
-  } catch (error) {
-    serverLogger.error('Async parse failed', error as Error);
-    res.status(500).json({ error: (error as Error).message });
+  } catch (error: unknown) {
+    serverLogger.error('Async parse failed', error instanceof Error ? error : new Error(String(error)));
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 
@@ -225,7 +245,7 @@ router.get('/:jobId', async (req: AuthenticatedRequest, res) => {
     }
 
     const job = result.rows[0];
-    const response: any = {
+    const response: JobResponse = {
       jobId: job.id,
       status: job.status,
       fileName: job.file_name,
@@ -242,8 +262,9 @@ router.get('/:jobId', async (req: AuthenticatedRequest, res) => {
     }
 
     res.json(response);
-  } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+  } catch (error: unknown) {
+    serverLogger.error('Failed to fetch job status', error instanceof Error ? error : new Error(String(error)));
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 
@@ -324,9 +345,10 @@ router.post('/batch', async (req: AuthenticatedRequest, res) => {
               ['completed', JSON.stringify(result.resume), result.hash, Date.now() - startTime, job.id]
             );
           } catch (error) {
+            serverLogger.error('Batch job failed', error instanceof Error ? error : new Error(String(error)), { jobId: job.id });
             await db.query(
               `UPDATE parse_jobs SET status = $1, error = $2, completed_at = NOW() WHERE id = $3`,
-              ['failed', (error as Error).message, job.id]
+              ['failed', error instanceof Error ? error.message : 'Unknown error', job.id]
             );
           }
         },
@@ -338,9 +360,9 @@ router.post('/batch', async (req: AuthenticatedRequest, res) => {
       totalFiles: files.length,
       message: `${files.length} files queued for processing`,
     });
-  } catch (error) {
-    serverLogger.error('Batch parse failed', error as Error);
-    res.status(500).json({ error: (error as Error).message });
+  } catch (error: unknown) {
+    serverLogger.error('Batch parse failed', error instanceof Error ? error : new Error(String(error)));
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 
@@ -392,27 +414,16 @@ router.post('/prefetch', async (req, res) => {
       hashes
     );
 
-    const cachedSet = new Set(cacheResult.rows.map((r: any) => r.file_hash));
+    const cachedSet = new Set(cacheResult.rows.map((r: { file_hash: string }) => r.file_hash));
     const uncached = hashes.filter((h: string) => !cachedSet.has(h));
 
-    // Enqueue uncached hashes for background processing
-    for (const hash of uncached) {
-      jobQueue.enqueue({
-        id: `prefetch-${hash}`,
-        status: 'pending',
-        execute: async () => {
-          serverLogger.info('Prefetch job placeholder', { hash });
-        },
-      });
-    }
-
     res.json({
-      queued: uncached.length,
+      uncached: uncached.length,
       alreadyCached: cachedSet.size,
     });
-  } catch (error) {
-    serverLogger.error('Prefetch failed', error as Error);
-    res.status(500).json({ error: (error as Error).message });
+  } catch (error: unknown) {
+    serverLogger.error('Prefetch failed', error instanceof Error ? error : new Error(String(error)));
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 

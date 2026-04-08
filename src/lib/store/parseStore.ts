@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { Resume } from '../types';
 import { FileClassification } from '../classifiers/classifier';
-import { ContentClassification } from '../classifiers/contentClassifier';
+import { ContentClassification } from '@shared/classifiers/contentClassifier';
 import { ValidationResult } from '../validators';
 import { StageName, StageStatus } from '../processTracer';
 

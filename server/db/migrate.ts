@@ -26,7 +26,7 @@ export async function runMigrations(): Promise<void> {
 
   // 获取已执行的迁移
   const executed = await db.query('SELECT version FROM schema_migrations ORDER BY version');
-  const executedVersions = new Set(executed.rows.map((r: any) => r.version));
+  const executedVersions = new Set(executed.rows.map((r: { version: string }) => r.version));
 
   // 读取迁移文件
   const files = fs.readdirSync(MIGRATIONS_DIR)

@@ -30,8 +30,8 @@ export async function processWithEvaluation(
         enableClassification: config.enableClassification,
         onStageComplete: (stage, data) => {
           if (config.enableProcessTrace && stage) {
-            tracer.startStage(stage as any);
-            tracer.completeStage(stage as any, data);
+            tracer.startStage(stage);
+            tracer.completeStage(stage, data);
           }
         }
       });
@@ -62,8 +62,8 @@ export async function processWithEvaluation(
       });
 
       onProgress?.(i + 1, files.length);
-    } catch (error) {
-      logger.error(`Failed to process ${file.name}`, error as Error);
+    } catch (error: unknown) {
+      logger.error(`Failed to process ${file.name}`, error instanceof Error ? error : new Error(String(error)));
     }
   }
 }

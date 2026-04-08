@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { classifyDifficulty } from './difficultyClassifier';
+import { classifyDifficulty } from '@shared/classifiers/difficultyClassifier';
 
 describe('difficultyClassifier', () => {
   it('classifies easy resume with standard headers', () => {

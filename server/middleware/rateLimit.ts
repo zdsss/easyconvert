@@ -66,12 +66,27 @@ export function rateLimitMiddleware(
 }
 
 // 定期清理过期条目（每 5 分钟）
-setInterval(() => {
-  const cutoff = Date.now() - DEFAULT_WINDOW_MS;
-  for (const [key, entry] of rateLimitStore) {
-    entry.timestamps = entry.timestamps.filter((t) => t > cutoff);
-    if (entry.timestamps.length === 0) {
-      rateLimitStore.delete(key);
+let cleanupInterval: ReturnType<typeof setInterval> | null = null;
+
+export function startRateLimitCleanup(): void {
+  if (cleanupInterval) return;
+  cleanupInterval = setInterval(() => {
+    const cutoff = Date.now() - DEFAULT_WINDOW_MS;
+    for (const [key, entry] of rateLimitStore) {
+      entry.timestamps = entry.timestamps.filter((t) => t > cutoff);
+      if (entry.timestamps.length === 0) {
+        rateLimitStore.delete(key);
+      }
     }
+  }, 5 * 60 * 1000);
+}
+
+export function stopRateLimitCleanup(): void {
+  if (cleanupInterval) {
+    clearInterval(cleanupInterval);
+    cleanupInterval = null;
   }
-}, 5 * 60 * 1000);
+}
+
+// Auto-start on import for backward compatibility
+startRateLimitCleanup();

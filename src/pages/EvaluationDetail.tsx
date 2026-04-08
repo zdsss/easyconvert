@@ -16,7 +16,7 @@ function adaptTaskResponse(task: TaskResponse): EvaluationTask {
   return {
     ...task,
     type: (task.type as 'single' | 'batch') || 'single',
-    config: task.config as any || { enableFieldLevel: false, enableClassification: false, enableProcessTrace: false, accuracyMethod: 'exact' },
+    config: task.config || { enableFieldLevel: false, enableClassification: false, enableProcessTrace: false, accuracyMethod: 'exact' as const },
     stats: task.stats || { totalFiles: 0, processedFiles: 0, successCount: 0, failureCount: 0 },
     createdAt: new Date(task.createdAt),
     updatedAt: new Date(task.updatedAt || task.createdAt)
@@ -78,9 +78,9 @@ export default function EvaluationDetail() {
         evaluationApi.getResults(taskId)
       ]);
       setCurrentTask(adaptTaskResponse(task));
-      setResults(taskResults as any);
-    } catch (error) {
-      logger.error('Failed to load data', error as Error);
+      setResults(taskResults);
+    } catch (error: unknown) {
+      logger.error('Failed to load data', error instanceof Error ? error : new Error(String(error)));
       setCurrentTask({
         id: id!, name: '评测任务', type: 'batch', status: 'pending',
         config: { enableFieldLevel: true, enableClassification: true, enableProcessTrace: false, accuracyMethod: 'partial' },
@@ -111,10 +111,10 @@ export default function EvaluationDetail() {
         annotations
       }, (current, total) => setProgress({ current, total }));
       const updatedResults = await evaluationApi.getResults(currentTask.id);
-      setResults(updatedResults as any);
+      setResults(updatedResults);
       setCurrentTask({ ...currentTask, status: 'completed' });
-    } catch (error) {
-      logger.error('Evaluation failed', error as Error);
+    } catch (error: unknown) {
+      logger.error('Evaluation failed', error instanceof Error ? error : new Error(String(error)));
     } finally {
       setRunning(false);
     }
@@ -135,22 +135,22 @@ export default function EvaluationDetail() {
     try {
       await evaluationApi.retryFailed(currentTask.id);
       await loadTaskAndResults(currentTask.id);
-    } catch (error) {
-      logger.error('Failed to retry', error as Error);
+    } catch (error: unknown) {
+      logger.error('Failed to retry', error instanceof Error ? error : new Error(String(error)));
     } finally {
       setRetrying(false);
     }
   };
 
-  const handleSaveAnnotation = async (annotation: any) => {
+  const handleSaveAnnotation = async (annotation: unknown) => {
     if (!selectedResult || !currentTask) return;
     try {
-      await evaluationApi.saveAnnotation(currentTask.id, selectedResult.id, annotation);
+      await evaluationApi.saveAnnotation(currentTask.id, selectedResult.id, annotation as Resume);
       const updatedResults = await evaluationApi.getResults(currentTask.id);
-      setResults(updatedResults as any);
+      setResults(updatedResults);
       setSelectedResult(null);
-    } catch (error) {
-      logger.error('Failed to save annotation', error as Error);
+    } catch (error: unknown) {
+      logger.error('Failed to save annotation', error instanceof Error ? error : new Error(String(error)));
     }
   };
 
@@ -488,11 +488,11 @@ export default function EvaluationDetail() {
         const [idA, idB] = Array.from(selectedRows);
         const resultA = results.find(r => r.id === idA);
         const resultB = results.find(r => r.id === idB);
-        if (!resultA || !resultB) return null;
+        if (!resultA || !resultB || !resultA.parsedResume || !resultB.parsedResume) return null;
         // If resultA has annotation, compare parsed vs annotation; otherwise compare two parsed resumes
         const useAnnotation = !!(resultA.annotation);
         const leftResume = resultA.parsedResume;
-        const rightResume = useAnnotation ? (resultA.annotation as any) : resultB.parsedResume;
+        const rightResume = (useAnnotation ? resultA.annotation : resultB.parsedResume)!;
         const leftLabel = resultA.fileName;
         const rightLabel = useAnnotation ? `${resultA.fileName} (标注)` : resultB.fileName;
         return (
