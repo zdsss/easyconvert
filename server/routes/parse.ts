@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { parseService } from '../services/parseService';
-import { serverLogger } from '../lib/logger';
 import type { AuthenticatedRequest } from '../types';
 import type { ServerFileInput } from '../lib/types';
+import { asyncHandler } from '../lib/asyncHandler';
 
 const router = Router();
 
@@ -37,37 +37,32 @@ const router = Router();
  *       500:
  *         description: 服务器错误
  */
-router.post('/', async (req: AuthenticatedRequest, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded. Use multipart/form-data with field name "file"' });
-    }
-
-    const file: ServerFileInput = {
-      buffer: req.file.buffer,
-      name: req.file.originalname,
-      size: req.file.size,
-      mimeType: req.file.mimetype,
-    };
-
-    const result = await parseService.syncParse(file);
-
-    res.json({
-      success: true,
-      data: {
-        resume: result.resume,
-        classification: result.classification,
-        difficulty: result.difficultyClass,
-        fromCache: result.fromCache,
-        hash: result.hash,
-        validation: result.validation,
-      },
-    });
-  } catch (error: unknown) {
-    serverLogger.error('Parse failed', error instanceof Error ? error : new Error(String(error)));
-    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+router.post('/', asyncHandler(async (req: AuthenticatedRequest, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No file uploaded. Use multipart/form-data with field name "file"' });
   }
-});
+
+  const file: ServerFileInput = {
+    buffer: req.file.buffer,
+    name: req.file.originalname,
+    size: req.file.size,
+    mimeType: req.file.mimetype,
+  };
+
+  const result = await parseService.syncParse(file);
+
+  res.json({
+    success: true,
+    data: {
+      resume: result.resume,
+      classification: result.classification,
+      difficulty: result.difficultyClass,
+      fromCache: result.fromCache,
+      hash: result.hash,
+      validation: result.validation,
+    },
+  });
+}));
 
 /**
  * @openapi
@@ -100,31 +95,26 @@ router.post('/', async (req: AuthenticatedRequest, res) => {
  *       500:
  *         description: 服务器错误
  */
-router.post('/async', async (req: AuthenticatedRequest, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
-    }
-
-    const file: ServerFileInput = {
-      buffer: req.file.buffer,
-      name: req.file.originalname,
-      size: req.file.size,
-      mimeType: req.file.mimetype,
-    };
-
-    const job = await parseService.asyncParse(file, req.tenantId, req.apiKeyId, req.body?.webhookUrl);
-
-    res.status(202).json({
-      jobId: job.id,
-      status: 'pending',
-      message: 'Job queued for processing',
-    });
-  } catch (error: unknown) {
-    serverLogger.error('Async parse failed', error instanceof Error ? error : new Error(String(error)));
-    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+router.post('/async', asyncHandler(async (req: AuthenticatedRequest, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No file uploaded' });
   }
-});
+
+  const file: ServerFileInput = {
+    buffer: req.file.buffer,
+    name: req.file.originalname,
+    size: req.file.size,
+    mimeType: req.file.mimetype,
+  };
+
+  const job = await parseService.asyncParse(file, req.tenantId, req.apiKeyId, req.body?.webhookUrl);
+
+  res.status(202).json({
+    jobId: job.id,
+    status: 'pending',
+    message: 'Job queued for processing',
+  });
+}));
 
 /**
  * @openapi
@@ -148,18 +138,13 @@ router.post('/async', async (req: AuthenticatedRequest, res) => {
  *       500:
  *         description: 服务器错误
  */
-router.get('/:jobId', async (req: AuthenticatedRequest, res) => {
-  try {
-    const response = await parseService.getJobStatus(req.params.jobId);
-    if (!response) {
-      return res.status(404).json({ error: 'Job not found' });
-    }
-    res.json(response);
-  } catch (error: unknown) {
-    serverLogger.error('Failed to fetch job status', error instanceof Error ? error : new Error(String(error)));
-    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+router.get('/:jobId', asyncHandler(async (req: AuthenticatedRequest, res) => {
+  const response = await parseService.getJobStatus(req.params.jobId);
+  if (!response) {
+    return res.status(404).json({ error: 'Job not found' });
   }
-});
+  res.json(response);
+}));
 
 /**
  * @openapi
@@ -194,29 +179,24 @@ router.get('/:jobId', async (req: AuthenticatedRequest, res) => {
  *       500:
  *         description: 服务器错误
  */
-router.post('/batch', async (req: AuthenticatedRequest, res) => {
-  try {
-    const files = req.files as Express.Multer.File[] | undefined;
-    if (!files || files.length === 0) {
-      return res.status(400).json({ error: 'No files uploaded. Use multipart/form-data with field name "files"' });
-    }
-
-    if (files.length > 20) {
-      return res.status(400).json({ error: 'Maximum 20 files per batch' });
-    }
-
-    const jobIds = await parseService.batchParse(files, req.tenantId, req.apiKeyId);
-
-    res.status(202).json({
-      jobIds,
-      totalFiles: files.length,
-      message: `${files.length} files queued for processing`,
-    });
-  } catch (error: unknown) {
-    serverLogger.error('Batch parse failed', error instanceof Error ? error : new Error(String(error)));
-    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+router.post('/batch', asyncHandler(async (req: AuthenticatedRequest, res) => {
+  const files = req.files as Express.Multer.File[] | undefined;
+  if (!files || files.length === 0) {
+    return res.status(400).json({ error: 'No files uploaded. Use multipart/form-data with field name "files"' });
   }
-});
+
+  if (files.length > 20) {
+    return res.status(400).json({ error: 'Maximum 20 files per batch' });
+  }
+
+  const jobIds = await parseService.batchParse(files, req.tenantId, req.apiKeyId);
+
+  res.status(202).json({
+    jobIds,
+    totalFiles: files.length,
+    message: `${files.length} files queued for processing`,
+  });
+}));
 
 /**
  * @openapi
@@ -242,20 +222,15 @@ router.post('/batch', async (req: AuthenticatedRequest, res) => {
  *       400:
  *         description: hashes 参数无效
  */
-router.post('/prefetch', async (req, res) => {
-  try {
-    const { hashes } = req.body;
+router.post('/prefetch', asyncHandler(async (req, res) => {
+  const { hashes } = req.body;
 
-    if (!Array.isArray(hashes) || hashes.length === 0) {
-      return res.status(400).json({ error: 'hashes must be a non-empty array' });
-    }
-
-    const result = await parseService.checkCachedHashes(hashes);
-    res.json(result);
-  } catch (error: unknown) {
-    serverLogger.error('Prefetch failed', error instanceof Error ? error : new Error(String(error)));
-    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+  if (!Array.isArray(hashes) || hashes.length === 0) {
+    return res.status(400).json({ error: 'hashes must be a non-empty array' });
   }
-});
+
+  const result = await parseService.checkCachedHashes(hashes);
+  res.json(result);
+}));
 
 export default router;

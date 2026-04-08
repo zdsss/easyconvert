@@ -6,6 +6,7 @@ import {
   getErrorPatterns,
   getCostReport,
 } from '../lib/reportGenerator';
+import { asyncHandler } from '../lib/asyncHandler';
 
 const router = Router();
 
@@ -33,20 +34,15 @@ const router = Router();
  *       500:
  *         description: 服务器错误
  */
-router.post('/', async (req, res) => {
-  try {
-    const { taskId } = req.body;
-    if (!taskId) {
-      return res.status(400).json({ error: 'taskId is required' });
-    }
-
-    const report = await generateServerReport(taskId);
-    res.json(report);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    res.status(500).json({ error: message });
+router.post('/', asyncHandler(async (req, res) => {
+  const { taskId } = req.body;
+  if (!taskId) {
+    return res.status(400).json({ error: 'taskId is required' });
   }
-});
+
+  const report = await generateServerReport(taskId);
+  res.json(report);
+}));
 
 /**
  * @openapi
@@ -60,15 +56,10 @@ router.post('/', async (req, res) => {
  *       500:
  *         description: 服务器错误
  */
-router.get('/trends', async (_req, res) => {
-  try {
-    const trends = await getAccuracyTrends();
-    res.json(trends);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    res.status(500).json({ error: message });
-  }
-});
+router.get('/trends', asyncHandler(async (_req, res) => {
+  const trends = await getAccuracyTrends();
+  res.json(trends);
+}));
 
 /**
  * @openapi
@@ -88,15 +79,10 @@ router.get('/trends', async (_req, res) => {
  *       500:
  *         description: 服务器错误
  */
-router.get('/distribution/:taskId', async (req, res) => {
-  try {
-    const distribution = await getDistribution(req.params.taskId);
-    res.json(distribution);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    res.status(500).json({ error: message });
-  }
-});
+router.get('/distribution/:taskId', asyncHandler(async (req, res) => {
+  const distribution = await getDistribution(req.params.taskId);
+  res.json(distribution);
+}));
 
 /**
  * @openapi
@@ -116,15 +102,10 @@ router.get('/distribution/:taskId', async (req, res) => {
  *       500:
  *         description: 服务器错误
  */
-router.get('/errors/:taskId', async (req, res) => {
-  try {
-    const errors = await getErrorPatterns(req.params.taskId);
-    res.json(errors);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    res.status(500).json({ error: message });
-  }
-});
+router.get('/errors/:taskId', asyncHandler(async (req, res) => {
+  const errors = await getErrorPatterns(req.params.taskId);
+  res.json(errors);
+}));
 
 /**
  * @openapi
@@ -144,14 +125,9 @@ router.get('/errors/:taskId', async (req, res) => {
  *       500:
  *         description: 服务器错误
  */
-router.get('/cost/:taskId', async (req, res) => {
-  try {
-    const cost = await getCostReport(req.params.taskId);
-    res.json(cost);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    res.status(500).json({ error: message });
-  }
-});
+router.get('/cost/:taskId', asyncHandler(async (req, res) => {
+  const cost = await getCostReport(req.params.taskId);
+  res.json(cost);
+}));
 
 export default router;
