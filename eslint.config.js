@@ -31,7 +31,18 @@ export default [
         clearTimeout: 'readonly',
         crypto: 'readonly',
         React: 'readonly',
-        AbortController: 'readonly'
+        AbortController: 'readonly',
+        localStorage: 'readonly',
+        navigator: 'readonly',
+        btoa: 'readonly',
+        atob: 'readonly',
+        global: 'readonly',
+        HTMLDivElement: 'readonly',
+        HTMLInputElement: 'readonly',
+        KeyboardEvent: 'readonly',
+        MouseEvent: 'readonly',
+        CustomEvent: 'readonly',
+        Node: 'readonly',
       }
     },
     plugins: {
@@ -48,6 +59,43 @@ export default [
     },
     settings: {
       react: { version: 'detect' }
+    }
+  },
+  {
+    files: ['server/**/*.ts', 'shared/**/*.ts'],
+    languageOptions: {
+      parser: tsParser,
+      parserOptions: {
+        ecmaVersion: 2020,
+        sourceType: 'module',
+      },
+      globals: {
+        console: 'readonly',
+        fetch: 'readonly',
+        process: 'readonly',
+        Buffer: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
+        URL: 'readonly',
+        AbortController: 'readonly',
+        crypto: 'readonly',
+        Express: 'readonly',
+        require: 'readonly',
+        __dirname: 'readonly',
+        __filename: 'readonly',
+      }
+    },
+    plugins: {
+      '@typescript-eslint': tsPlugin,
+    },
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'warn',
+      'no-console': 'off',
+      'no-undef': 'error',
+      'no-unused-vars': 'off',
+      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }]
     }
   }
 ];

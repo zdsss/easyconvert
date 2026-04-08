@@ -16,32 +16,33 @@ interface FlywheelCandidate {
 
 /** Parse a row's result JSON and extract confidence/quality/language metadata */
 function extractCandidate(row: Record<string, unknown>): FlywheelCandidate | null {
-  let parsed = row.result;
+  let parsed = row.result as Record<string, unknown> | null;
   if (typeof parsed === 'string') {
     try { parsed = JSON.parse(parsed); } catch { parsed = null; }
   }
   if (!parsed) return null;
 
-  const confidence = parsed?.additional?._confidence;
+  const additional = parsed?.additional as Record<string, unknown> | undefined;
+  const confidence = additional?._confidence;
   let avgConfidence = 0;
   if (confidence && typeof confidence === 'object') {
-    const values = Object.values(confidence).filter((v): v is number => typeof v === 'number');
+    const values = Object.values(confidence as Record<string, unknown>).filter((v): v is number => typeof v === 'number');
     if (values.length > 0) {
       avgConfidence = values.reduce((sum, v) => sum + v, 0) / values.length;
     }
   }
 
-  const qualityScore = parsed?.additional?.qualityScore ?? null;
-  const language = parsed?.additional?.language ?? null;
+  const qualityScore = (additional?.qualityScore as number) ?? null;
+  const language = (additional?.language as string) ?? null;
 
   return {
-    id: row.id,
-    fileName: row.file_name,
-    fileSize: row.file_size,
+    id: row.id as string,
+    fileName: row.file_name as string,
+    fileSize: row.file_size as number,
     avgConfidence: Math.round(avgConfidence * 1000) / 1000,
     qualityScore,
     language,
-    createdAt: row.created_at,
+    createdAt: row.created_at as string,
   };
 }
 

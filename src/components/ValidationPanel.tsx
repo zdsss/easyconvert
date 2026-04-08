@@ -1,4 +1,4 @@
-import { ValidationResult } from '@lib/validators';
+import type { ValidationResult } from '@shared/types';
 
 interface Props {
   result: ValidationResult | null;

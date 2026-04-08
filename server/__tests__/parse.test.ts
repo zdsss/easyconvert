@@ -5,7 +5,7 @@ import multer from 'multer';
 
 // Mock db
 const mockQuery = vi.fn();
-vi.mock('../db', () => ({ default: { query: (...args: any[]) => mockQuery(...args) } }));
+vi.mock('../db', () => ({ default: { query: (...args: unknown[]) => mockQuery(...args) } }));
 
 // Mock jobQueue
 vi.mock('../lib/jobQueue', () => ({ jobQueue: { enqueue: vi.fn() } }));
@@ -15,7 +15,7 @@ vi.mock('../lib/logger', () => ({ serverLogger: { info: vi.fn(), warn: vi.fn(), 
 
 const mockProcessResume = vi.fn();
 vi.mock('../lib/resumeProcessor', () => ({
-  processResume: (...args: any[]) => mockProcessResume(...args),
+  processResume: (...args: unknown[]) => mockProcessResume(...args),
 }));
 
 import parseRouter from '../routes/parse';
@@ -25,7 +25,7 @@ function buildApp() {
   app.use(express.json());
   const upload = multer({ storage: multer.memoryStorage() });
   // Apply single-file upload for sync/async routes, array upload for batch
-  app.post('/batch', upload.array('files', 20), (req, res, next) => { (parseRouter as any)(req, res, next); });
+  app.post('/batch', upload.array('files', 20), (req, res, next) => { (parseRouter as unknown as express.RequestHandler)(req, res, next); });
   app.use('/', upload.single('file'), parseRouter);
   return app;
 }

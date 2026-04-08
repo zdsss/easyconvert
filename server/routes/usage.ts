@@ -112,8 +112,8 @@ router.get('/', async (req, res) => {
 
       const requestsByEndpoint = endpointResult.rows.map((r: Record<string, unknown>) => ({
         endpoint: r.endpoint,
-        count: parseInt(r.count) || 0,
-        avgLatency: Math.round(parseFloat(r.avg_latency) || 0),
+        count: parseInt(String(r.count)) || 0,
+        avgLatency: Math.round(parseFloat(String(r.avg_latency)) || 0),
       }));
 
       res.json({

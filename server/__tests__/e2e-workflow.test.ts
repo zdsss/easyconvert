@@ -4,11 +4,11 @@ import request from 'supertest';
 import multer from 'multer';
 
 // Stateful in-memory store to simulate DB
-const store: { tasks: any[]; results: any[] } = { tasks: [], results: [] };
+const store: { tasks: Record<string, unknown>[]; results: Record<string, unknown>[] } = { tasks: [], results: [] };
 let taskIdCounter = 1;
 let resultIdCounter = 1;
 
-const mockQuery = vi.fn().mockImplementation((text: string, params?: any[]) => {
+const mockQuery = vi.fn().mockImplementation((text: string, params?: unknown[]) => {
   // INSERT evaluation_tasks
   if (text.includes('INSERT INTO evaluation_tasks')) {
     const task = {
@@ -54,7 +54,7 @@ const mockQuery = vi.fn().mockImplementation((text: string, params?: any[]) => {
   return { rows: [] };
 });
 
-vi.mock('../db', () => ({ default: { query: (...args: any[]) => mockQuery(...args) } }));
+vi.mock('../db', () => ({ default: { query: (...args: unknown[]) => mockQuery(...args) } }));
 vi.mock('../lib/logger', () => ({
   serverLogger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
@@ -63,7 +63,7 @@ vi.mock('../lib/webhookDelivery', () => ({ deliverWebhook: vi.fn() }));
 
 const mockProcessResume = vi.fn();
 vi.mock('../lib/resumeProcessor', () => ({
-  processResume: (...args: any[]) => mockProcessResume(...args),
+  processResume: (...args: unknown[]) => mockProcessResume(...args),
 }));
 
 import parseRouter from '../routes/parse';

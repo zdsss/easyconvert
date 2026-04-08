@@ -4,7 +4,7 @@ import request from 'supertest';
 
 // Mock db
 const mockQuery = vi.fn();
-vi.mock('../db', () => ({ default: { query: (...args: any[]) => mockQuery(...args) } }));
+vi.mock('../db', () => ({ default: { query: (...args: unknown[]) => mockQuery(...args) } }));
 
 // Mock logger
 vi.mock('../lib/logger', () => ({ serverLogger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } }));

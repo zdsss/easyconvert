@@ -15,7 +15,7 @@ describe('JobQueue', () => {
     vi.clearAllMocks();
     // Reset internal state by accessing private fields — the queue is a singleton
     // so we need to drain it between tests
-    const q = jobQueue as any;
+    const q = jobQueue as unknown as { queue: unknown[]; processing: number };
     q.queue = [];
     q.processing = 0;
   });

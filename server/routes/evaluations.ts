@@ -84,11 +84,11 @@ router.get('/', async (req, res) => {
 
     if (status) {
       query += ' WHERE status = $1';
-      params.push(status);
+      params.push(String(status));
     }
 
     query += ` ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
-    params.push(limit, offset);
+    params.push(Number(limit), offset);
 
     const result = await pool.query(query, params);
     res.json(result.rows);

@@ -123,7 +123,7 @@ function EducationTab({ resume }: { resume: Resume }) {
     <div className="space-y-3">
       {edu.map((e, i) => (
         <div key={i} className="p-4 bg-surface-secondary rounded-lg">
-          <p className="text-sm font-semibold text-text-primary">{e.institution || e.school}</p>
+          <p className="text-sm font-semibold text-text-primary">{e.institution}</p>
           <p className="text-sm text-text-secondary">{e.degree} · {e.major || '-'}</p>
           <p className="text-xs text-text-tertiary mt-1">{e.startDate} ~ {e.endDate || '-'}</p>
         </div>

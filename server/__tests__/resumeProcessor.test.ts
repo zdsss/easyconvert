@@ -55,7 +55,7 @@ describe('Server resumeProcessor', () => {
 
   it('should return cached result when available', async () => {
     const { getCached } = await import('../lib/cache');
-    (getCached as any).mockResolvedValueOnce({
+    (getCached as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       resume: {
         basics: { name: '缓存用户', email: 'cached@test.com', phone: '123' },
         work: [],

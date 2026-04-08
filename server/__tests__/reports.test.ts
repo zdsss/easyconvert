@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 // Mock db
 const mockQuery = vi.fn();
-vi.mock('../db', () => ({ default: { query: (...args: any[]) => mockQuery(...args) } }));
+vi.mock('../db', () => ({ default: { query: (...args: unknown[]) => mockQuery(...args) } }));
 
 import {
   generateServerReport,

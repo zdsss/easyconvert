@@ -120,7 +120,7 @@ function ParsedTab({ result }: { result: EvaluationResult }) {
           <div className="space-y-2">
             {r.education.map((e, i) => (
               <div key={i} className="p-3 bg-surface-secondary rounded-lg">
-                <p className="text-sm font-medium text-text-primary">{e.institution || e.school}</p>
+                <p className="text-sm font-medium text-text-primary">{e.institution}</p>
                 <p className="text-xs text-text-secondary">{e.degree} · {e.major || '-'}</p>
               </div>
             ))}

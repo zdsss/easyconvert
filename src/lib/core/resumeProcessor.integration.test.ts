@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { processResume } from './resumeProcessor';
 import * as cache from '@lib/cache';
 import * as extractWithLLM from '@lib/extractWithLLM';
+import type { CacheData } from '@shared/types';
 
 vi.mock('@lib/cache');
 vi.mock('@lib/extractWithLLM');
@@ -16,9 +17,9 @@ describe('resumeProcessor integration', () => {
 
   it('returns cached result when available', async () => {
     const mockFile = new File(['test'], 'test.pdf', { type: 'application/pdf' });
-    const mockCached: any = {
+    const mockCached: CacheData = {
       resume: { basics: { name: 'Test', email: 'test@test.com', phone: '123' }, work: [], education: [] },
-      contentClass: {},
+      contentClass: { structure: 'standard', detail: 'normal', modules: [], category: 'general' },
       timestamp: Date.now()
     };
 

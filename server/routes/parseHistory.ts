@@ -104,7 +104,7 @@ router.get('/:id', async (req: Request, res: Response) => {
     }
     const row = result.rows[0];
     if (typeof row.result === 'string') {
-      try { row.result = JSON.parse(row.result); } catch {}
+      try { row.result = JSON.parse(row.result); } catch { /* keep as string */ }
     }
     res.json(row);
   } catch (error) {
@@ -133,7 +133,7 @@ router.post('/', async (req: Request, res: Response) => {
 
     const row = dbResult.rows[0];
     if (typeof row.result === 'string') {
-      try { row.result = JSON.parse(row.result); } catch {}
+      try { row.result = JSON.parse(row.result); } catch { /* keep as string */ }
     }
     res.status(201).json(row);
   } catch (error) {
