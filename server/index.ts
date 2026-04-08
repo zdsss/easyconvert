@@ -11,6 +11,7 @@ import { rateLimitMiddleware } from './middleware/rateLimit';
 import { requestLoggerMiddleware } from './middleware/requestLogger';
 import { serverLogger } from './lib/logger';
 import { swaggerSpec } from './lib/swagger';
+import { deliverWebhook } from './lib/webhookDelivery';
 import evaluationsRouter from './routes/evaluations';
 import annotationsRouter from './routes/annotations';
 import reportsRouter from './routes/reports';
@@ -75,15 +76,11 @@ app.use('/api/v1/parse/batch', upload.array('files', 20));
 app.post('/api/alerts/webhook', express.json(), async (req, res) => {
   const { webhookUrl, message, rule } = req.body;
   if (!webhookUrl) return res.status(400).json({ error: 'webhookUrl required' });
-  try {
-    await fetch(webhookUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, rule, timestamp: new Date().toISOString() }),
-    });
+  const success = await deliverWebhook(webhookUrl, { message, rule, timestamp: new Date().toISOString() });
+  if (success) {
     res.json({ success: true });
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
+  } else {
+    res.status(500).json({ error: 'Webhook delivery failed' });
   }
 });
 

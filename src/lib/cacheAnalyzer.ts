@@ -7,6 +7,8 @@ interface CacheStats {
   avgMissTime: number;
 }
 
+const MAX_ENTRIES = 1000;
+
 class CacheAnalyzer {
   private hits = 0;
   private misses = 0;
@@ -16,11 +18,13 @@ class CacheAnalyzer {
   recordHit(time: number) {
     this.hits++;
     this.hitTimes.push(time);
+    if (this.hitTimes.length > MAX_ENTRIES) this.hitTimes.shift();
   }
 
   recordMiss(time: number) {
     this.misses++;
     this.missTimes.push(time);
+    if (this.missTimes.length > MAX_ENTRIES) this.missTimes.shift();
   }
 
   getStats(): CacheStats {

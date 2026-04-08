@@ -8,12 +8,6 @@ export const MODULE_COUNT_THRESHOLDS = {
   STANDARD: 7,
 } as const;
 
-export const CACHE_CONFIG = {
-  TTL_DAYS: 30,
-  MAX_SIZE: 100 * 1024 * 1024,
-  MAX_ENTRIES: 5000,
-} as const;
-
 export const CONCURRENCY_CONFIG = {
   DEFAULT_LIMIT: 2,
   MAX_LIMIT: 5,
