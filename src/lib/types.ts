@@ -8,6 +8,9 @@ export {
   type ParsingStrategy,
   type ResumeClassification,
   type StageName,
+  type StageStatus,
+  type ProcessStage,
+  type ProcessTrace,
   type ValidationResult,
   TimeoutError,
   ValidationError,
@@ -15,7 +18,7 @@ export {
 
 // Import for local use in frontend-only types below
 import type { Resume } from '@shared/types';
-import type { ProcessTrace } from '@lib/processTracer';
+import type { ProcessTrace } from '@shared/types';
 
 // ---------------------------------------------------------------------------
 // Frontend-only types (not shared with server)

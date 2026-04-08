@@ -1,53 +1,13 @@
 // ---------------------------------------------------------------------------
 // Shared types — the single source of truth for types used by both frontend
 // and server.  src/lib/types.ts re-exports these for backward compatibility.
+//
+// Resume type is derived from the Zod schema in shared/validation/schemas.ts.
 // ---------------------------------------------------------------------------
 
-export interface Resume {
-  basics: {
-    name: string;
-    email: string;
-    phone: string;
-    title?: string;
-    location?: string;
-  };
-  work: Array<{
-    company: string;
-    position: string;
-    startDate: string;
-    endDate: string;
-    responsibilities?: string[];
-    achievements?: string[];
-    highlights?: string[];
-  }>;
-  education: Array<{
-    institution: string;
-    school?: string;
-    degree: string;
-    major?: string;
-    startDate: string;
-    endDate: string;
-    courses?: string[];
-    honors?: string[];
-    gpa?: string;
-  }>;
-  skills?: string[];
-  certificates?: Array<{
-    name: string;
-    issuer?: string;
-    date?: string;
-  }>;
-  projects?: Array<{
-    name: string;
-    role?: string;
-    startDate?: string;
-    endDate?: string;
-    description?: string;
-    achievements?: string[];
-  }>;
-  summary?: string;
-  additional?: Record<string, unknown>;
-}
+import type { ResumeData } from './validation/schemas';
+
+export type Resume = ResumeData;
 
 export type StructureType = 'simple' | 'standard' | 'complete';
 export type DetailLevel = 'brief' | 'normal' | 'detailed';
@@ -107,6 +67,23 @@ export type StageName =
   | 'content_classify'
   | 'validation'
   | 'cache_store';
+
+export type StageStatus = 'pending' | 'processing' | 'completed' | 'failed';
+
+export interface ProcessStage {
+  name: StageName;
+  status: StageStatus;
+  startTime: Date;
+  endTime?: Date;
+  duration?: number;
+  error?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ProcessTrace {
+  stages: ProcessStage[];
+  totalDuration: number;
+}
 
 // --- Validation types ---
 

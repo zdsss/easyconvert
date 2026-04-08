@@ -1,23 +1,6 @@
-// Re-export from shared (single source of truth)
-export type { StageName } from '@shared/types';
-import type { StageName } from '@shared/types';
-
-export type StageStatus = 'pending' | 'processing' | 'completed' | 'failed';
-
-export interface ProcessStage {
-  name: StageName;
-  status: StageStatus;
-  startTime: Date;
-  endTime?: Date;
-  duration?: number;
-  error?: string;
-  metadata?: Record<string, unknown>;
-}
-
-export interface ProcessTrace {
-  stages: ProcessStage[];
-  totalDuration: number;
-}
+// Re-export types from shared (single source of truth)
+export type { StageName, StageStatus, ProcessStage, ProcessTrace } from '@shared/types';
+import type { StageName, ProcessStage, ProcessTrace } from '@shared/types';
 
 export class ProcessTracer {
   private stages: ProcessStage[] = [];

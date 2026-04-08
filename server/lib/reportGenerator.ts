@@ -1,6 +1,7 @@
 import db from '../db';
 import { serverLogger } from './logger';
 import { calculateCost, DEFAULT_MODEL } from '@shared/pricing';
+import { serverCostTracker } from './extractWithLLM';
 
 interface EvaluationResultRow {
   id: string;
@@ -64,7 +65,7 @@ export async function generateServerReport(taskId: string): Promise<ReportData> 
   const resultsResult = await db.query('SELECT * FROM evaluation_results WHERE task_id = $1', [taskId]);
 
   const task = taskResult.rows[0] as TaskRow | undefined;
-  const results = resultsResult.rows as EvaluationResultRow[];
+  const results = resultsResult.rows as unknown as EvaluationResultRow[];
 
   if (!task) throw new Error('Task not found');
 
@@ -104,10 +105,10 @@ export async function getAccuracyTrends(): Promise<Array<{ date: string; accurac
 
   const byDate = new Map<string, { total: number; sum: number }>();
   for (const r of results.rows) {
-    const date = new Date(r.created_at).toISOString().split('T')[0];
+    const date = new Date(r.created_at as string).toISOString().split('T')[0];
     const entry = byDate.get(date) || { total: 0, sum: 0 };
     entry.total++;
-    entry.sum += parseMetric(r.metrics, 'accuracy');
+    entry.sum += parseMetric(r.metrics as string | Record<string, number> | null, 'accuracy');
     byDate.set(date, entry);
   }
 
@@ -123,7 +124,7 @@ export async function getAccuracyTrends(): Promise<Array<{ date: string; accurac
  */
 export async function getDistribution(taskId: string) {
   const results = await db.query('SELECT classification FROM evaluation_results WHERE task_id = $1', [taskId]);
-  return buildDistribution(results.rows);
+  return buildDistribution(results.rows as unknown as EvaluationResultRow[]);
 }
 
 /**
@@ -134,7 +135,7 @@ export async function getErrorPatterns(taskId: string) {
     'SELECT file_name, metrics, parsed_resume FROM evaluation_results WHERE task_id = $1',
     [taskId]
   );
-  return analyzeErrors(results.rows);
+  return analyzeErrors(results.rows as unknown as EvaluationResultRow[]);
 }
 
 /**
@@ -153,14 +154,15 @@ export async function getCostReport(taskId: string) {
   const taskConfig = taskResult.rows[0]?.config;
   const model = (typeof taskConfig === 'string' ? JSON.parse(taskConfig) : taskConfig)?.model || DEFAULT_MODEL;
 
-  const rows = resultsResult.rows as EvaluationResultRow[];
+  const rows = resultsResult.rows as unknown as EvaluationResultRow[];
   const nonCached = rows.filter((r) => !r.from_cache);
   const avgTime = nonCached.length > 0
     ? nonCached.reduce((sum, r) => sum + r.processing_time, 0) / nonCached.length
     : 0;
 
-  // 粗略估算 token 消耗（基于处理时间），假设 input:output ≈ 3:1
-  const estimatedTokensPerFile = 2000;
+  // Use actual token data from cost tracker when available, fall back to estimation
+  const trackerAvg = serverCostTracker.getAvgTokensPerCall();
+  const estimatedTokensPerFile = trackerAvg > 0 ? trackerAvg : 2000;
   const totalTokens = nonCached.length * estimatedTokensPerFile;
   const estimatedInput = Math.round(totalTokens * 0.75);
   const estimatedOutput = totalTokens - estimatedInput;
