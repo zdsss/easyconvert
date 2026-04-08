@@ -1,6 +1,3 @@
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
-
 interface TrendPoint { date: string; accuracy: number; count: number; }
 interface Distribution { difficulty: Record<string, number>; completeness: Record<string, number>; scenario: Record<string, number>; }
 interface CostData { totalFiles: number; cachedFiles: number; totalTokens: number; estimatedCost: number; avgTokensPerFile: number; avgProcessingTime: number; }
@@ -14,7 +11,10 @@ export interface ReportPdfData {
   fieldAccuracy: Record<string, { accuracy: number; matchType: string }>;
 }
 
-export function exportReportToPdf(data: ReportPdfData): void {
+export async function exportReportToPdf(data: ReportPdfData): Promise<void> {
+  // Lazy-load heavy dependencies (~200KB) only when user exports
+  const jsPDF = (await import('jspdf')).default;
+  await import('jspdf-autotable');
   const doc = new jsPDF();
   const now = new Date().toLocaleDateString('zh-CN');
   let y = 20;

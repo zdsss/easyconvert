@@ -17,7 +17,7 @@ export default function ExportButton() {
   };
 
   return (
-    <button onClick={handleExport} className="mt-4 px-6 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+    <button onClick={handleExport} className="mt-4 px-6 py-2 bg-brand-600 text-white rounded hover:bg-brand-700 transition-colors">
       导出JSON
     </button>
   );
