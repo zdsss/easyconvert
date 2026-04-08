@@ -69,7 +69,7 @@ describe('Data Flywheel API', () => {
     const app = buildApp();
     const res1 = await request(app).post('/promote').send({});
     expect(res1.status).toBe(400);
-    expect(res1.body.error).toMatch(/required/i);
+    expect(res1.body.error).toMatch(/validation|required/i);
 
     const res2 = await request(app).post('/promote').send({ candidateId: 'c1' });
     expect(res2.status).toBe(400);

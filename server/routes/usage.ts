@@ -62,18 +62,22 @@ router.get('/', async (req, res) => {
         [days]
       );
 
-      // 填充缺失的日期
+      // 填充缺失的日期 — pre-build Map for O(1) lookup
+      const dateCountMap = new Map<string, number>();
+      for (const r of dailyResult.rows as Record<string, unknown>[]) {
+        const d = r.date as Date | string | undefined;
+        const key = d && typeof d === 'object' && 'toISOString' in d
+          ? (d as Date).toISOString().split('T')[0]
+          : String(d);
+        dateCountMap.set(key, parseInt(String(r.count)) || 0);
+      }
+
       const requestsByDay: { date: string; count: number }[] = [];
       for (let i = days - 1; i >= 0; i--) {
         const d = new Date();
         d.setDate(d.getDate() - i);
         const dateStr = d.toISOString().split('T')[0];
-        const found = dailyResult.rows.find((r: Record<string, unknown>) => {
-          const d = r.date as Date | string | undefined;
-          if (d && typeof d === 'object' && 'toISOString' in d) return (d as Date).toISOString().split('T')[0] === dateStr;
-          return d === dateStr;
-        });
-        requestsByDay.push({ date: dateStr, count: found ? parseInt(found.count) : 0 });
+        requestsByDay.push({ date: dateStr, count: dateCountMap.get(dateStr) || 0 });
       }
 
       // 延迟分布（基于 processing_time 字段，单位 ms）
@@ -194,17 +198,21 @@ router.get('/overview', async (req, res) => {
          ORDER BY date`
       );
 
+      const trendMap = new Map<string, number>();
+      for (const r of trendResult.rows as Record<string, unknown>[]) {
+        const d = r.date as Date | string | undefined;
+        const key = d && typeof d === 'object' && 'toISOString' in d
+          ? (d as Date).toISOString().split('T')[0]
+          : String(d);
+        trendMap.set(key, parseInt(String(r.count)) || 0);
+      }
+
       const requestTrend: { date: string; count: number }[] = [];
       for (let i = 6; i >= 0; i--) {
         const d = new Date();
         d.setDate(d.getDate() - i);
         const dateStr = d.toISOString().split('T')[0];
-        const found = trendResult.rows.find((r: Record<string, unknown>) => {
-          const d = r.date as Date | string | undefined;
-          if (d && typeof d === 'object' && 'toISOString' in d) return (d as Date).toISOString().split('T')[0] === dateStr;
-          return d === dateStr;
-        });
-        requestTrend.push({ date: dateStr, count: found ? parseInt(found.count) : 0 });
+        requestTrend.push({ date: dateStr, count: trendMap.get(dateStr) || 0 });
       }
 
       // 限流使用率：最近1分钟请求数 / 最大限流值

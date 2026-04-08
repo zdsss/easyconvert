@@ -2,14 +2,12 @@ import { Router } from 'express';
 import type { AuthenticatedRequest } from '../types';
 import * as keyService from '../services/keyService';
 import { asyncHandler } from '../lib/asyncHandler';
+import { validateBody, createKeySchema } from '../lib/validate';
 
 const router = Router();
 
-router.post('/', asyncHandler(async (req: AuthenticatedRequest, res) => {
-  const { name, tenantId, scopes, rateLimit, expiresAt } = req.body;
-  if (!name) return res.status(400).json({ error: 'name is required' });
-
-  const key = await keyService.createKey({ name, tenantId, scopes, rateLimit, expiresAt });
+router.post('/', validateBody(createKeySchema), asyncHandler(async (req: AuthenticatedRequest, res) => {
+  const key = await keyService.createKey(req.body);
   res.status(201).json(key);
 }));
 

@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import { asyncHandler } from '../lib/asyncHandler';
+import { validateBody, createEvaluationSchema, updateEvaluationSchema, saveResultSchema } from '../lib/validate';
 import * as evaluationService from '../services/evaluationService';
 
 const router = Router();
 
-router.post('/', asyncHandler(async (req, res) => {
+router.post('/', validateBody(createEvaluationSchema), asyncHandler(async (req, res) => {
   const task = await evaluationService.createTask(req.body);
   res.json(task);
 }));
@@ -25,7 +26,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
   res.json(task);
 }));
 
-router.put('/:id', asyncHandler(async (req, res) => {
+router.put('/:id', validateBody(updateEvaluationSchema), asyncHandler(async (req, res) => {
   const task = await evaluationService.updateTask(req.params.id, req.body);
   res.json(task);
 }));
@@ -40,7 +41,7 @@ router.post('/:id/retry-failed', asyncHandler(async (req, res) => {
   res.json({ retriedCount });
 }));
 
-router.post('/:id/results', asyncHandler(async (req, res) => {
+router.post('/:id/results', validateBody(saveResultSchema), asyncHandler(async (req, res) => {
   const result = await evaluationService.saveResult(req.params.id, req.body);
   res.json(result);
 }));

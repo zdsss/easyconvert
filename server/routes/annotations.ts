@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import db from '../db';
 import { asyncHandler } from '../lib/asyncHandler';
+import { validateBody, annotationSchema, batchAnnotationSchema } from '../lib/validate';
 
 const router = Router();
 
-router.post('/:taskId/annotations', asyncHandler(async (req, res) => {
+router.post('/:taskId/annotations', validateBody(annotationSchema), asyncHandler(async (req, res) => {
   const { resultId, annotation } = req.body;
   const result = await db.query(
     'UPDATE evaluation_results SET annotation = $1 WHERE id = $2 AND task_id = $3 RETURNING *',
@@ -13,11 +14,10 @@ router.post('/:taskId/annotations', asyncHandler(async (req, res) => {
   res.json(result.rows[0]);
 }));
 
-router.post('/:taskId/annotations/batch', asyncHandler(async (req, res) => {
+router.post('/:taskId/annotations/batch', validateBody(batchAnnotationSchema), asyncHandler(async (req, res) => {
   const { annotations } = req.body;
   const taskId = req.params.taskId;
 
-  // Run all updates concurrently instead of sequentially (N+1 → parallel)
   const results = await Promise.all(
     annotations.map(({ resultId, annotation }: { resultId: string; annotation: unknown }) =>
       db.query(
