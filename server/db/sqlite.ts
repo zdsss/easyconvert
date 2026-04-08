@@ -11,6 +11,9 @@ const sqliteDb = new BetterSqlite3(':memory:');
 sqliteDb.pragma('foreign_keys = ON');
 sqliteDb.pragma('journal_mode = WAL');
 
+/** Expose the raw better-sqlite3 instance so Kysely can share it */
+export { sqliteDb as rawSqliteDb };
+
 // ---------------------------------------------------------------------------
 // Migrations (PG → SQLite adapted)
 // ---------------------------------------------------------------------------

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 
-// Mock db — evaluations.ts imports as `pool` via `import pool from '../db'`
+// Mock db
 const mockQuery = vi.fn();
 vi.mock('../db', () => ({ default: { query: (...args: unknown[]) => mockQuery(...args) } }));
 

@@ -210,8 +210,9 @@ router.get('/overview', async (req, res) => {
         `SELECT COUNT(*) as count FROM parse_jobs WHERE created_at > NOW() - INTERVAL '1 minute'`
       );
       const recentCount = parseInt(recentResult.rows[0]?.count) || 0;
-      // 默认限流 100/min
-      const rateLimitUsage = Math.min((recentCount / 100) * 100, 100);
+      // Use actual tenant quota if available, fallback to 100
+      const tenantQuota = 100; // overview endpoint has no auth context; use default
+      const rateLimitUsage = Math.min((recentCount / tenantQuota) * 100, 100);
 
       res.json({
         tenantId: rawTenantId,

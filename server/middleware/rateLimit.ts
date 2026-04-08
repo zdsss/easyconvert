@@ -13,6 +13,7 @@ const DEFAULT_MAX_REQUESTS = 100;
 
 /**
  * 滑动窗口限流中间件
+ * Uses per-tenant quota from auth middleware, falls back to DEFAULT_MAX_REQUESTS
  */
 export function rateLimitMiddleware(
   req: AuthenticatedRequest,
@@ -27,6 +28,7 @@ export function rateLimitMiddleware(
   const key = req.apiKeyId;
   const now = Date.now();
   const windowStart = now - DEFAULT_WINDOW_MS;
+  const maxRequests = req.quotaPerMinute || DEFAULT_MAX_REQUESTS;
 
   let entry = rateLimitStore.get(key);
   if (!entry) {
@@ -37,12 +39,12 @@ export function rateLimitMiddleware(
   // 清理窗口外的时间戳
   entry.timestamps = entry.timestamps.filter((t) => t > windowStart);
 
-  if (entry.timestamps.length >= DEFAULT_MAX_REQUESTS) {
+  if (entry.timestamps.length >= maxRequests) {
     const oldestInWindow = entry.timestamps[0];
     const retryAfter = Math.ceil((oldestInWindow + DEFAULT_WINDOW_MS - now) / 1000);
 
     res.set('Retry-After', String(retryAfter));
-    res.set('X-RateLimit-Limit', String(DEFAULT_MAX_REQUESTS));
+    res.set('X-RateLimit-Limit', String(maxRequests));
     res.set('X-RateLimit-Remaining', '0');
     res.set('X-RateLimit-Reset', String(Math.ceil((oldestInWindow + DEFAULT_WINDOW_MS) / 1000)));
     res.status(429).json({
@@ -58,8 +60,8 @@ export function rateLimitMiddleware(
     ? Math.ceil((entry.timestamps[0] + DEFAULT_WINDOW_MS) / 1000)
     : Math.ceil((now + DEFAULT_WINDOW_MS) / 1000);
 
-  res.set('X-RateLimit-Limit', String(DEFAULT_MAX_REQUESTS));
-  res.set('X-RateLimit-Remaining', String(DEFAULT_MAX_REQUESTS - entry.timestamps.length));
+  res.set('X-RateLimit-Limit', String(maxRequests));
+  res.set('X-RateLimit-Remaining', String(maxRequests - entry.timestamps.length));
   res.set('X-RateLimit-Reset', String(resetTime));
 
   next();

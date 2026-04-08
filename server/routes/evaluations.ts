@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import pool from '../db';
+import db from '../db';
 import { serverLogger } from '../lib/logger';
 
 const router = Router();
@@ -35,7 +35,7 @@ const router = Router();
 router.post('/', async (req, res) => {
   try {
     const { name, description, type, config } = req.body;
-    const result = await pool.query(
+    const result = await db.query(
       `INSERT INTO evaluation_tasks (name, description, type, status, config, stats)
        VALUES ($1, $2, $3, 'pending', $4, '{"totalFiles":0,"processedFiles":0,"successCount":0,"failureCount":0}')
        RETURNING *`,
@@ -90,7 +90,7 @@ router.get('/', async (req, res) => {
     query += ` ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
     params.push(Number(limit), offset);
 
-    const result = await pool.query(query, params);
+    const result = await db.query(query, params);
     res.json(result.rows);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
@@ -121,7 +121,7 @@ router.get('/', async (req, res) => {
  */
 router.get('/:id', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM evaluation_tasks WHERE id = $1', [req.params.id]);
+    const result = await db.query('SELECT * FROM evaluation_tasks WHERE id = $1', [req.params.id]);
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Task not found' });
     }
@@ -165,7 +165,7 @@ router.get('/:id', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { status, stats } = req.body;
-    const result = await pool.query(
+    const result = await db.query(
       'UPDATE evaluation_tasks SET status = $1, stats = $2, updated_at = NOW() WHERE id = $3 RETURNING *',
       [status, JSON.stringify(stats), req.params.id]
     );
@@ -197,7 +197,7 @@ router.put('/:id', async (req, res) => {
  */
 router.get('/:id/results', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM evaluation_results WHERE task_id = $1', [req.params.id]);
+    const result = await db.query('SELECT * FROM evaluation_results WHERE task_id = $1', [req.params.id]);
     res.json(result.rows);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
@@ -233,7 +233,7 @@ router.get('/:id/results', async (req, res) => {
  */
 router.post('/:id/retry-failed', async (req, res) => {
   try {
-    const result = await pool.query(
+    const result = await db.query(
       `UPDATE evaluation_results SET status = 'pending' WHERE task_id = $1 AND status = 'failed' RETURNING id`,
       [req.params.id]
     );
@@ -249,7 +249,7 @@ router.post('/:id/retry-failed', async (req, res) => {
 router.post('/:id/results', async (req, res) => {
   try {
     const { fileName, fileHash, parsedResume, classification, processTrace, metrics, processingTime, fromCache } = req.body;
-    const result = await pool.query(
+    const result = await db.query(
       `INSERT INTO evaluation_results (task_id, file_name, file_hash, parsed_resume, classification, process_trace, metrics, processing_time, from_cache)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
       [req.params.id, fileName, fileHash, JSON.stringify(parsedResume), JSON.stringify(classification), JSON.stringify(processTrace), JSON.stringify(metrics), processingTime, fromCache]

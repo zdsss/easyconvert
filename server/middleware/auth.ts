@@ -6,6 +6,27 @@ import db from '../db';
 // 内部路由前缀 — 跳过认证
 const INTERNAL_PREFIXES = ['/api/evaluations', '/api/annotations', '/api/reports'];
 
+// Tenant quota cache (5-minute TTL)
+const quotaCache = new Map<string, { quota: number; expiresAt: number }>();
+const QUOTA_CACHE_TTL = 5 * 60 * 1000;
+
+async function getTenantQuota(tenantId: string): Promise<number> {
+  const cached = quotaCache.get(tenantId);
+  if (cached && cached.expiresAt > Date.now()) return cached.quota;
+
+  try {
+    const result = await db.query(
+      'SELECT quota_per_minute FROM tenants WHERE id = $1',
+      [tenantId]
+    );
+    const quota = (result.rows[0]?.quota_per_minute as number) || 100;
+    quotaCache.set(tenantId, { quota, expiresAt: Date.now() + QUOTA_CACHE_TTL });
+    return quota;
+  } catch {
+    return 100; // fallback
+  }
+}
+
 /**
  * API Key 认证中间件
  * Authorization: Bearer <key> → SHA-256 hash → 查 api_keys 表
@@ -56,6 +77,7 @@ export async function authMiddleware(
     req.tenantId = key.tenant_id as string;
     req.apiKeyId = key.id as string;
     req.scopes = key.scopes as string[];
+    req.quotaPerMinute = await getTenantQuota(key.tenant_id as string);
 
     // 更新 last_used_at（异步，不阻塞请求）
     db.query('UPDATE api_keys SET last_used_at = NOW() WHERE id = $1', [key.id]).catch(() => {});
