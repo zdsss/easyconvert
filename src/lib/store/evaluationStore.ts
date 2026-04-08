@@ -50,3 +50,12 @@ export const useEvaluationStore = create<EvaluationState>((set) => ({
   setViewMode: (mode) => set({ viewMode: mode }),
   setLoading: (loading) => set({ isLoading: loading }),
 }));
+
+// ---------------------------------------------------------------------------
+// Fine-grained selectors — prevent unnecessary re-renders
+// ---------------------------------------------------------------------------
+export const useTasks = () => useEvaluationStore(s => s.tasks);
+export const useCurrentTask = () => useEvaluationStore(s => s.currentTask);
+export const useResults = () => useEvaluationStore(s => s.results);
+export const useViewMode = () => useEvaluationStore(s => s.viewMode);
+export const useEvalLoading = () => useEvaluationStore(s => s.isLoading);

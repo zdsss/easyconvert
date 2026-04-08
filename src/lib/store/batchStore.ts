@@ -86,3 +86,10 @@ export const useBatchStore = create<BatchState>((set) => ({
       concurrency: { active: 0, queued: 0 }
     }),
 }));
+
+// ---------------------------------------------------------------------------
+// Fine-grained selectors — prevent unnecessary re-renders
+// ---------------------------------------------------------------------------
+export const useBatchFiles = () => useBatchStore(s => s.files);
+export const useBatchOverall = () => useBatchStore(s => s.overall);
+export const useBatchConcurrency = () => useBatchStore(s => s.concurrency);

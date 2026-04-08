@@ -93,3 +93,15 @@ export const useStore = create<State>((set) => ({
       },
     }),
 }));
+
+// ---------------------------------------------------------------------------
+// Fine-grained selectors — prevent unnecessary re-renders
+// ---------------------------------------------------------------------------
+export const useResume = () => useStore(s => s.resume);
+export const useIsLoading = () => useStore(s => s.isLoading);
+export const useFileClassification = () => useStore(s => s.fileClassification);
+export const useContentClassification = () => useStore(s => s.contentClassification);
+export const useCacheHit = () => useStore(s => s.cacheHit);
+export const useValidationResult = () => useStore(s => s.validationResult);
+export const useProcessState = () => useStore(s => s.processState);
+export const useCurrentStage = () => useStore(s => s.processState.currentStage);
