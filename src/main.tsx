@@ -2,6 +2,7 @@ import React, { lazy, Suspense } from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import AppLayout from './components/AppLayout'
+import ErrorBoundary from './components/ErrorBoundary'
 import ToastContainer from './components/ui/Toast'
 import './index.css'
 
@@ -24,6 +25,7 @@ function Root() {
   return (
     <BrowserRouter>
       <AppLayout>
+        <ErrorBoundary>
         <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="w-6 h-6 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" /></div>}>
           <Routes>
             {/* Redirects */}
@@ -57,6 +59,7 @@ function Root() {
             <Route path="/prompt-lab" element={<PromptLabPage />} />
           </Routes>
         </Suspense>
+        </ErrorBoundary>
       </AppLayout>
       <ToastContainer />
     </BrowserRouter>

@@ -15,15 +15,17 @@ router.post('/:taskId/annotations', asyncHandler(async (req, res) => {
 
 router.post('/:taskId/annotations/batch', asyncHandler(async (req, res) => {
   const { annotations } = req.body;
-  const results = [];
+  const taskId = req.params.taskId;
 
-  for (const { resultId, annotation } of annotations) {
-    const result = await db.query(
-      'UPDATE evaluation_results SET annotation = $1 WHERE id = $2 AND task_id = $3 RETURNING *',
-      [JSON.stringify(annotation), resultId, req.params.taskId]
-    );
-    results.push(result.rows[0]);
-  }
+  // Run all updates concurrently instead of sequentially (N+1 → parallel)
+  const results = await Promise.all(
+    annotations.map(({ resultId, annotation }: { resultId: string; annotation: unknown }) =>
+      db.query(
+        'UPDATE evaluation_results SET annotation = $1 WHERE id = $2 AND task_id = $3 RETURNING *',
+        [JSON.stringify(annotation), resultId, taskId]
+      ).then(r => r.rows[0])
+    )
+  );
 
   res.json(results);
 }));

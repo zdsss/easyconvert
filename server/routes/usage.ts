@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import db from '../db';
 import { resolveTenantId } from '../lib/tenant';
+import { serverLogger } from '../lib/logger';
 
 const router = Router();
 
@@ -125,7 +126,8 @@ router.get('/', async (req, res) => {
         requestsByDay,
         latencyDistribution,
       });
-    } catch {
+    } catch (error) {
+      serverLogger.warn('Usage stats query failed, returning empty data', { error: String(error) });
       // DB not available — return empty data
       res.json({
         totalRequests: 0,
@@ -221,7 +223,8 @@ router.get('/overview', async (req, res) => {
         rateLimitUsage: Math.round(rateLimitUsage * 10) / 10,
         requestTrend,
       });
-    } catch {
+    } catch (error) {
+      serverLogger.warn('Usage overview query failed, returning empty data', { error: String(error) });
       res.json({
         tenantId: rawTenantId,
         activeKeys: 0,

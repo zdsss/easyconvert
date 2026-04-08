@@ -2,6 +2,7 @@ import { createHash } from 'crypto';
 import type { Response, NextFunction } from 'express';
 import type { AuthenticatedRequest } from '../types';
 import db from '../db';
+import { serverLogger } from '../lib/logger';
 
 // 内部路由前缀 — 跳过认证
 const INTERNAL_PREFIXES = ['/api/evaluations', '/api/annotations', '/api/reports'];
@@ -80,7 +81,8 @@ export async function authMiddleware(
     req.quotaPerMinute = await getTenantQuota(key.tenant_id as string);
 
     // 更新 last_used_at（异步，不阻塞请求）
-    db.query('UPDATE api_keys SET last_used_at = NOW() WHERE id = $1', [key.id]).catch(() => {});
+    db.query('UPDATE api_keys SET last_used_at = NOW() WHERE id = $1', [key.id])
+      .catch((err: unknown) => serverLogger.warn('Failed to update last_used_at', { keyId: key.id, error: String(err) }));
 
     next();
   } catch {
