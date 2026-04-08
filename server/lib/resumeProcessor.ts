@@ -8,7 +8,7 @@ import { createLogFn } from '@shared/logger';
 import { hashResume, checkDuplicate, registerResult } from './dedup';
 import type { ServerFileInput } from './types';
 import type { Resume, CacheData, ContentClassification, ValidationResult } from '@shared/types';
-import type { StageName } from '@shared/processTracer';
+import type { StageName } from '@shared/types';
 
 import { classifyResume } from '@shared/classifiers';
 import { getStrategy } from '@shared/parsingStrategy';

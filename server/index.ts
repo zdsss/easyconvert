@@ -70,7 +70,6 @@ app.use('/api/v1', rateLimitMiddleware);
 app.use('/api/v1/keys', keysRouter);
 app.use('/api/v1/usage', usageRouter);
 app.use('/api/v1/parse', upload.single('file'), parseRouter);
-app.use('/api/v1/parse/batch', upload.array('files', 20));
 
 // Alert webhook — forward alert to external URL
 app.post('/api/alerts/webhook', express.json(), async (req, res) => {

@@ -47,15 +47,3 @@ export function getMetrics(): Metrics {
   return { ...metrics };
 }
 
-export function resetMetrics() {
-  metrics = {
-    totalProcessed: 0,
-    successCount: 0,
-    failureCount: 0,
-    cacheHits: 0,
-    totalTime: 0,
-    avgTime: 0,
-    successRate: 0,
-    cacheHitRate: 0
-  };
-}

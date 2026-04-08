@@ -4,7 +4,7 @@ import mammoth from 'mammoth';
  * 降级提取：直接从原始字节中提取可见文本
  * 适用于伪装成 .docx 的旧版 .doc 文件，或 mammoth 无法处理的格式
  */
-export function extractTextFallback(data: ArrayBuffer): string {
+function extractTextFallback(data: ArrayBuffer): string {
   const bytes = new Uint8Array(data);
   let text = '';
 
