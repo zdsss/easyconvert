@@ -1,90 +1,56 @@
 import type { TaskResponse, EvaluationResult, EvaluationConfig, Resume } from '../types';
-
-const API_BASE = '/api';
+import { apiFetch, buildQuery } from './client';
 
 export const evaluationApi = {
-  async createTask(data: { name: string; description?: string; type: string; config: EvaluationConfig }): Promise<TaskResponse> {
-    const res = await fetch(`${API_BASE}/evaluations`, {
+  async createTask(data: { name: string; description?: string; type: string; config: EvaluationConfig }, signal?: AbortSignal): Promise<TaskResponse> {
+    return apiFetch('/evaluations', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
+      signal,
     });
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}: ${await res.text()}`);
-    }
-    return res.json();
   },
 
-  async getTasks(params?: { page?: number; limit?: number; status?: string }): Promise<TaskResponse[]> {
-    const query = new URLSearchParams(
-      Object.entries(params ?? {}).filter(([, v]) => v != null) as [string, string][]
-    ).toString();
-    const res = await fetch(`${API_BASE}/evaluations?${query}`);
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}: ${await res.text()}`);
-    }
-    return res.json();
+  async getTasks(params?: { page?: number; limit?: number; status?: string }, signal?: AbortSignal): Promise<TaskResponse[]> {
+    return apiFetch(`/evaluations${buildQuery(params ?? {})}`, { signal });
   },
 
-  async getTask(id: string): Promise<TaskResponse> {
-    const res = await fetch(`${API_BASE}/evaluations/${id}`);
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}: ${await res.text()}`);
-    }
-    return res.json();
+  async getTask(id: string, signal?: AbortSignal): Promise<TaskResponse> {
+    return apiFetch(`/evaluations/${id}`, { signal });
   },
 
-  async updateTask(id: string, data: { status?: string; stats?: Record<string, number> }): Promise<TaskResponse> {
-    const res = await fetch(`${API_BASE}/evaluations/${id}`, {
+  async updateTask(id: string, data: { status?: string; stats?: Record<string, number> }, signal?: AbortSignal): Promise<TaskResponse> {
+    return apiFetch(`/evaluations/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
+      signal,
     });
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}: ${await res.text()}`);
-    }
-    return res.json();
   },
 
-  async getResults(taskId: string): Promise<EvaluationResult[]> {
-    const res = await fetch(`${API_BASE}/evaluations/${taskId}/results`);
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}: ${await res.text()}`);
-    }
-    return res.json();
+  async getResults(taskId: string, signal?: AbortSignal): Promise<EvaluationResult[]> {
+    return apiFetch(`/evaluations/${taskId}/results`, { signal });
   },
 
-  async saveResult(taskId: string, data: EvaluationResult): Promise<void> {
-    const res = await fetch(`${API_BASE}/evaluations/${taskId}/results`, {
+  async saveResult(taskId: string, data: EvaluationResult, signal?: AbortSignal): Promise<void> {
+    return apiFetch(`/evaluations/${taskId}/results`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
+      signal,
     });
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}: ${await res.text()}`);
-    }
-    return res.json();
   },
 
-  async saveAnnotation(taskId: string, resultId: string, annotation: Resume): Promise<void> {
-    const res = await fetch(`${API_BASE}/annotations/${taskId}/annotations`, {
+  async saveAnnotation(taskId: string, resultId: string, annotation: Resume, signal?: AbortSignal): Promise<void> {
+    return apiFetch(`/annotations/${taskId}/annotations`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ resultId, annotation }),
+      signal,
     });
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}: ${await res.text()}`);
-    }
-    return res.json();
   },
 
-  async retryFailed(taskId: string): Promise<{ retriedCount: number }> {
-    const res = await fetch(`${API_BASE}/evaluations/${taskId}/retry-failed`, {
-      method: 'POST',
-    });
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}: ${await res.text()}`);
-    }
-    return res.json();
+  async retryFailed(taskId: string, signal?: AbortSignal): Promise<{ retriedCount: number }> {
+    return apiFetch(`/evaluations/${taskId}/retry-failed`, { method: 'POST', signal });
   },
 };

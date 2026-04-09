@@ -1,8 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useMonitoringStore } from '@lib/store/monitoringStore';
 import MetricCard from '@components/ui/MetricCard';
 import DistributionChart from '@components/DistributionChart';
 import Icon from '@components/ui/Icon';
+import PerformanceCard from '@components/PerformanceCard';
+import CostCard from '@components/CostCard';
+import AlertRulesSection from '@components/AlertRulesSection';
+import type { AlertRule } from '@components/AlertRulesSection';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const TIME_RANGES = [
@@ -10,15 +14,6 @@ const TIME_RANGES = [
   { label: '24小时', value: '24h' },
   { label: '7天', value: '7d' },
 ] as const;
-
-interface AlertRule {
-  id: string;
-  type: 'errorRate' | 'p95Latency' | 'dailyCost';
-  threshold: number;
-  enabled: boolean;
-  label: string;
-  unit: string;
-}
 
 const DEFAULT_RULES: AlertRule[] = [
   { id: 'errorRate', type: 'errorRate', threshold: 10, enabled: false, label: '错误率', unit: '%' },
@@ -28,7 +23,7 @@ const DEFAULT_RULES: AlertRule[] = [
 
 const STORAGE_KEY = 'easyconvert-alert-rules';
 
-function Toast({ message, onClose }: { message: string; onClose: () => void }) {
+function AlertToast({ message, onClose }: { message: string; onClose: () => void }) {
   useEffect(() => {
     const t = setTimeout(onClose, 4000);
     return () => clearTimeout(t);
@@ -58,13 +53,13 @@ export default function MonitorPage() {
   const [toasts, setToasts] = useState<{ id: string; message: string }[]>([]);
   const [firedAlerts, setFiredAlerts] = useState<Set<string>>(new Set());
 
-  const updateRule = (id: string, updates: Partial<AlertRule>) => {
+  const updateRule = useCallback((id: string, updates: Partial<AlertRule>) => {
     setRules(prev => {
       const next = prev.map(r => r.id === id ? { ...r, ...updates } : r);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       return next;
     });
-  };
+  }, []);
 
   useEffect(() => {
     sync();
@@ -101,29 +96,24 @@ export default function MonitorPage() {
     }
   }, [metrics, performance, cost]);
 
-  const cacheHitData = {
-    '命中': cacheStats.hits,
-    '未命中': cacheStats.misses,
-  };
-
   // Filter history by time range
   const timeRangeMs: Record<string, number> = { '1h': 60 * 60 * 1000, '24h': 24 * 60 * 60 * 1000, '7d': 7 * 24 * 60 * 60 * 1000 };
   const cutoff = Date.now() - (timeRangeMs[timeRange] || timeRangeMs['24h']);
   const filteredHistory = history.filter(h => h.timestamp >= cutoff);
   const displayHistory = filteredHistory.length > 0 ? filteredHistory : history;
 
-  // Derive sparkline data from history
   const processedSparkline = displayHistory.map(h => h.totalProcessed);
   const successRateSparkline = displayHistory.map(h => h.successRate);
   const cacheRateSparkline = displayHistory.map(h => h.cacheHitRate);
   const avgTimeSparkline = displayHistory.map(h => h.avgTime / 1000);
 
-  // Trend chart data from filtered history
   const trendData = displayHistory.map(h => ({
     time: new Date(h.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
     count: h.totalProcessed,
     successRate: Math.round(h.successRate * 10) / 10,
   }));
+
+  const cacheHitData = { '命中': cacheStats.hits, '未命中': cacheStats.misses };
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
@@ -154,37 +144,20 @@ export default function MonitorPage() {
         </div>
       </div>
 
-      {/* Metric cards with sparklines from real history */}
+      {/* Metric cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <MetricCard title="总处理数" value={metrics.totalProcessed} icon="layers" sparklineData={processedSparkline} />
         <MetricCard
-          title="总处理数"
-          value={metrics.totalProcessed}
-          icon="layers"
-          sparklineData={processedSparkline}
-        />
-        <MetricCard
-          title="成功率"
-          value={`${metrics.successRate.toFixed(1)}%`}
-          icon="check-circle"
-          color="text-status-success"
+          title="成功率" value={`${metrics.successRate.toFixed(1)}%`} icon="check-circle" color="text-status-success"
           trend={displayHistory.length >= 2 ? {
             value: Math.round((displayHistory[displayHistory.length - 1].successRate - displayHistory[0].successRate) * 10) / 10,
             direction: displayHistory[displayHistory.length - 1].successRate >= displayHistory[0].successRate ? 'up' : 'down',
           } : undefined}
           sparklineData={successRateSparkline}
         />
+        <MetricCard title="缓存命中率" value={`${metrics.cacheHitRate.toFixed(1)}%`} icon="zap" color="text-status-info" sparklineData={cacheRateSparkline} />
         <MetricCard
-          title="缓存命中率"
-          value={`${metrics.cacheHitRate.toFixed(1)}%`}
-          icon="zap"
-          color="text-status-info"
-          sparklineData={cacheRateSparkline}
-        />
-        <MetricCard
-          title="平均耗时"
-          value={`${(metrics.avgTime / 1000).toFixed(2)}s`}
-          icon="clock"
-          color="text-status-warning"
+          title="平均耗时" value={`${(metrics.avgTime / 1000).toFixed(2)}s`} icon="clock" color="text-status-warning"
           trend={displayHistory.length >= 2 ? {
             value: Math.round(((displayHistory[displayHistory.length - 1].avgTime - displayHistory[0].avgTime) / Math.max(displayHistory[0].avgTime, 1)) * -100 * 10) / 10,
             direction: displayHistory[displayHistory.length - 1].avgTime <= displayHistory[0].avgTime ? 'up' : 'down',
@@ -194,7 +167,7 @@ export default function MonitorPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        {/* Trend chart — real data from history */}
+        {/* Trend chart */}
         <div className="lg:col-span-2 card p-5">
           <h3 className="section-title flex items-center gap-2 mb-4">
             <Icon name="activity" size={16} className="text-text-tertiary" />
@@ -248,98 +221,16 @@ export default function MonitorPage() {
         </div>
       </div>
 
-      {/* Performance */}
+      {/* Performance + Cost */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <div className="card p-5">
-          <h3 className="section-title flex items-center gap-2 mb-4">
-            <Icon name="activity" size={16} className="text-text-tertiary" />
-            延迟分布
-          </h3>
-          <div className="grid grid-cols-3 gap-4">
-            {[
-              { label: 'P50', value: performance.p50 },
-              { label: 'P95', value: performance.p95 },
-              { label: 'P99', value: performance.p99 },
-            ].map(p => {
-              const color = p.value < 500 ? 'text-status-success' : p.value < 2000 ? 'text-status-warning' : 'text-status-error';
-              return (
-                <div key={p.label} className="p-4 bg-surface-secondary rounded-lg text-center">
-                  <p className="text-xs text-text-secondary mb-1">{p.label}</p>
-                  <p className={`text-2xl font-bold font-mono ${color}`}>{p.value}ms</p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="card p-5">
-          <h3 className="section-title flex items-center gap-2 mb-4">
-            <Icon name="bar-chart" size={16} className="text-text-tertiary" />
-            成本追踪
-            {cost.model && <span className="text-xs text-text-tertiary font-normal ml-auto">{cost.model}</span>}
-          </h3>
-          <div className="grid grid-cols-2 gap-3 mb-3">
-            <div className="p-3 bg-surface-secondary rounded-lg text-center">
-              <p className="text-xs text-text-secondary mb-1">API 调用</p>
-              <p className="text-xl font-bold font-mono text-text-primary">{cost.calls}</p>
-            </div>
-            <div className="p-3 bg-surface-secondary rounded-lg text-center">
-              <p className="text-xs text-text-secondary mb-1">总 Token</p>
-              <p className="text-xl font-bold font-mono text-text-primary">{cost.tokens.toLocaleString()}</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3 mb-3">
-            <div className="p-3 bg-surface-secondary rounded-lg">
-              <p className="text-xs text-text-secondary mb-1">输入 Token</p>
-              <p className="text-sm font-mono text-text-primary">{cost.inputTokens.toLocaleString()}</p>
-              <p className="text-xs font-mono text-text-tertiary mt-0.5">¥{cost.inputCost.toFixed(6)}</p>
-            </div>
-            <div className="p-3 bg-surface-secondary rounded-lg">
-              <p className="text-xs text-text-secondary mb-1">输出 Token</p>
-              <p className="text-sm font-mono text-text-primary">{cost.outputTokens.toLocaleString()}</p>
-              <p className="text-xs font-mono text-text-tertiary mt-0.5">¥{cost.outputCost.toFixed(6)}</p>
-            </div>
-          </div>
-          <div className="p-3 bg-status-warning-bg dark:bg-amber-900/20 rounded-lg text-center">
-            <p className="text-xs text-text-secondary mb-1">累计成本</p>
-            <p className="text-2xl font-bold font-mono text-amber-700 dark:text-amber-400">¥{cost.estimatedCost.toFixed(6)}</p>
-          </div>
-        </div>
+        <PerformanceCard performance={performance} />
+        <CostCard cost={cost} />
       </div>
 
-      {/* Alert Rules */}
-      <div className="card p-5">
-        <h3 className="section-title flex items-center gap-2 mb-4">
-          <Icon name="bell" size={16} className="text-text-tertiary" />
-          告警规则
-        </h3>
-        <div className="space-y-3">
-          {rules.map(rule => (
-            <div key={rule.id} className="flex items-center gap-4 p-3 bg-surface-secondary rounded-lg">
-              <input
-                type="checkbox"
-                checked={rule.enabled}
-                onChange={e => updateRule(rule.id, { enabled: e.target.checked })}
-                className="w-4 h-4"
-              />
-              <span className="text-sm font-medium text-text-primary w-24">{rule.label}</span>
-              <span className="text-xs text-text-secondary">超过</span>
-              <input
-                type="number"
-                value={rule.threshold}
-                onChange={e => updateRule(rule.id, { threshold: Number(e.target.value) })}
-                className="w-20 px-2 py-1 border border-border rounded text-sm font-mono"
-                min={0}
-              />
-              <span className="text-xs text-text-secondary">{rule.unit} 时告警</span>
-            </div>
-          ))}
-        </div>
-      </div>
+      <AlertRulesSection rules={rules} onUpdate={updateRule} />
 
-      {/* Toast notifications */}
       {toasts.map(toast => (
-        <Toast
+        <AlertToast
           key={toast.id}
           message={toast.message}
           onClose={() => setToasts(prev => prev.filter(t => t.id !== toast.id))}

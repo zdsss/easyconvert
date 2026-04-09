@@ -21,8 +21,9 @@ describe('evaluationApi', () => {
     mockFetch.mockResolvedValue(okResponse([]));
     const result = await evaluationApi.getTasks({ page: 1, status: 'completed' });
     expect(result).toEqual([]);
-    expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/api/evaluations?'));
-    expect(mockFetch.mock.calls[0][0]).toContain('status=completed');
+    const url = mockFetch.mock.calls[0][0] as string;
+    expect(url).toContain('/api/evaluations?');
+    expect(url).toContain('status=completed');
   });
 
   it('getTask fetches by id', async () => {
@@ -30,20 +31,21 @@ describe('evaluationApi', () => {
     mockFetch.mockResolvedValue(okResponse(task));
     const result = await evaluationApi.getTask('1');
     expect(result).toEqual(task);
-    expect(mockFetch).toHaveBeenCalledWith('/api/evaluations/1');
+    expect(mockFetch.mock.calls[0][0]).toBe('/api/evaluations/1');
   });
 
   it('createTask sends POST with body', async () => {
     const data = { name: 'Test', type: 'batch', config: { enableFieldLevel: true, enableClassification: false, enableProcessTrace: false, accuracyMethod: 'exact' as const } };
     mockFetch.mockResolvedValue(okResponse({ id: '1', ...data }));
     await evaluationApi.createTask(data);
-    expect(mockFetch).toHaveBeenCalledWith('/api/evaluations', expect.objectContaining({ method: 'POST' }));
+    expect(mockFetch.mock.calls[0][0]).toBe('/api/evaluations');
+    expect(mockFetch.mock.calls[0][1]).toMatchObject({ method: 'POST' });
   });
 
   it('getResults fetches by taskId', async () => {
     mockFetch.mockResolvedValue(okResponse([]));
     await evaluationApi.getResults('task-1');
-    expect(mockFetch).toHaveBeenCalledWith('/api/evaluations/task-1/results');
+    expect(mockFetch.mock.calls[0][0]).toBe('/api/evaluations/task-1/results');
   });
 
   it('retryFailed sends POST', async () => {

@@ -32,6 +32,8 @@ export default [
         crypto: 'readonly',
         React: 'readonly',
         AbortController: 'readonly',
+        AbortSignal: 'readonly',
+        RequestInit: 'readonly',
         localStorage: 'readonly',
         navigator: 'readonly',
         btoa: 'readonly',
