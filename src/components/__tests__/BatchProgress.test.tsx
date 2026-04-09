@@ -1,7 +1,26 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import BatchProgress from '../BatchProgress';
 import { useBatchStore } from '@lib/store/batchStore';
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      const map: Record<string, string> = {
+        'batch.totalProgress': '总进度',
+        'batch.concurrent': '并发',
+        'batch.processing': '处理中',
+        'batch.waiting': '等待中',
+        'batch.cached': '缓存',
+        'batch.completed': '完成',
+        'batch.failed': '失败',
+        'batch.pending': '等待',
+      };
+      return map[key] ?? key;
+    },
+    i18n: { language: 'zh', changeLanguage: vi.fn() },
+  }),
+}));
 
 function createMockFile(name: string): File {
   return new File(['content'], name, { type: 'application/pdf' });

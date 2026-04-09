@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useBatchStore } from '@lib/store/batchStore';
 import { StageName } from '@lib/processTracer';
 
@@ -13,6 +14,7 @@ const stageOrder: StageName[] = [
 ];
 
 export default function BatchProgress() {
+  const { t } = useTranslation();
   const { files, overall, concurrency } = useBatchStore();
   const fileArray = Array.from(files.values());
 
@@ -22,10 +24,10 @@ export default function BatchProgress() {
       <div className="bg-gradient-to-r from-brand-50 to-brand-100 rounded-xl p-4 border border-brand-200">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-medium text-text-primary">
-            总进度: {overall.current}/{overall.total}
+            {t('batch.totalProgress')}: {overall.current}/{overall.total}
           </span>
           <span className="text-xs text-text-secondary">
-            并发: {concurrency.active} 处理中 / {concurrency.queued} 等待中
+            {t('batch.concurrent')}: {concurrency.active} {t('batch.processing')} / {concurrency.queued} {t('batch.waiting')}
           </span>
         </div>
         <div className="w-full bg-surface-tertiary rounded-full h-2" role="progressbar" aria-valuenow={Math.round((overall.current / overall.total) * 100)} aria-valuemin={0} aria-valuemax={100}>
@@ -61,10 +63,10 @@ export default function BatchProgress() {
                   {fileState.file.name}
                 </span>
                 <span className="text-xs ml-2">
-                  {fileState.status === 'completed' && (fileState.fromCache ? '💾 缓存' : '✓ 完成')}
-                  {fileState.status === 'failed' && '✗ 失败'}
-                  {fileState.status === 'processing' && '⏳ 处理中'}
-                  {fileState.status === 'pending' && '⏸ 等待'}
+                  {fileState.status === 'completed' && (fileState.fromCache ? `💾 ${t('batch.cached')}` : `✓ ${t('batch.completed')}`)}
+                  {fileState.status === 'failed' && `✗ ${t('batch.failed')}`}
+                  {fileState.status === 'processing' && `⏳ ${t('batch.processing')}`}
+                  {fileState.status === 'pending' && `⏸ ${t('batch.pending')}`}
                 </span>
               </div>
 

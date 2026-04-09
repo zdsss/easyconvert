@@ -58,6 +58,7 @@
     "noMatch": "无匹配任务",
     "createFirst": "创建第一个评测任务来开始",
     "tryFilter": "尝试切换筛选条件",
+    "createEvaluation": "创建评测",
     "processed": "已处理",
     "files": "文件",
     "filterAll": "全部",
@@ -67,7 +68,23 @@
     "filterFailed": "失败",
     "sortByDate": "按时间",
     "sortByName": "按名称",
-    "searchPlaceholder": "搜索任务..."
+    "searchPlaceholder": "搜索任务...",
+    "tabParsed": "解析结果",
+    "tabCompare": "对比标注",
+    "tabTimeline": "时间线",
+    "close": "关闭",
+    "editAnnotation": "编辑标注",
+    "saveAnnotation": "保存标注",
+    "annotationPlaceholder": "标注值",
+    "noAnnotation": "无标注数据可对比",
+    "classification": "分类",
+    "cache": "缓存",
+    "duration": "耗时",
+    "present": "至今",
+    "failed": "失败",
+    "accuracy": "准确率",
+    "workCount": "工作经历（{{count}} 段）",
+    "eduCount": "教育背景（{{count}} 段）"
   },
   "monitor": {
     "title": "监控仪表盘",
@@ -90,7 +107,14 @@
     "dataCollecting": "数据采集中，请稍候...",
     "timeRange1h": "1小时",
     "timeRange24h": "24小时",
-    "timeRange7d": "7天"
+    "timeRange7d": "7天",
+    "processedCount": "处理数",
+    "cache": "缓存",
+    "refresh": "刷新",
+    "errorRate": "错误率",
+    "p95Latency": "P95 延迟",
+    "dailyCost": "日成本",
+    "alertExceeded": "{{label}} 超阈值：当前 {{value}}{{unit}}，阈值 {{threshold}}{{unit}}"
   },
   "comparison": {
     "fieldComparison": "字段对比",
@@ -118,7 +142,13 @@
     "skills": "技能",
     "projects": "项目经历",
     "certificates": "证书",
-    "summary": "个人总结"
+    "summary": "个人总结",
+    "noBasics": "无基本信息",
+    "noWork": "无工作经历",
+    "noEducation": "无教育背景",
+    "noSkills": "无技能信息",
+    "rawJson": "原始JSON",
+    "present": "至今"
   },
   "timeline": {
     "title": "处理时间线",

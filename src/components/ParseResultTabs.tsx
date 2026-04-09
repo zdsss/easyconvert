@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Resume } from '@lib/types';
 import Icon from './ui/Icon';
 
@@ -6,24 +7,25 @@ interface Props {
   resume: Resume;
 }
 
-const TABS = [
-  { key: 'basics', label: '基本信息', icon: 'user' },
-  { key: 'work', label: '工作经历', icon: 'clipboard' },
-  { key: 'education', label: '教育背景', icon: 'layers' },
-  { key: 'skills', label: '技能', icon: 'zap' },
-  { key: 'raw', label: 'Raw JSON', icon: 'code' },
-] as const;
-
-type TabKey = typeof TABS[number]['key'];
+type TabKey = 'basics' | 'work' | 'education' | 'skills' | 'raw';
 
 export default function ParseResultTabs({ resume }: Props) {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<TabKey>('basics');
+
+  const tabs = [
+    { key: 'basics' as const, label: t('fields.basics'), icon: 'user' },
+    { key: 'work' as const, label: t('fields.work'), icon: 'clipboard' },
+    { key: 'education' as const, label: t('fields.education'), icon: 'layers' },
+    { key: 'skills' as const, label: t('fields.skills'), icon: 'zap' },
+    { key: 'raw' as const, label: t('fields.rawJson'), icon: 'code' },
+  ];
 
   return (
     <div className="card overflow-hidden">
       {/* Tab bar */}
       <div className="flex border-b border-border overflow-x-auto">
-        {TABS.map(tab => (
+        {tabs.map(tab => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
@@ -72,23 +74,25 @@ function FieldRow({ label, value, confidence }: { label: string; value?: string;
 }
 
 function BasicsTab({ resume }: { resume: Resume }) {
+  const { t } = useTranslation();
   const b = resume.basics;
-  if (!b) return <p className="text-sm text-text-secondary">无基本信息</p>;
+  if (!b) return <p className="text-sm text-text-secondary">{t('fields.noBasics')}</p>;
   return (
     <div>
-      <FieldRow label="姓名" value={b.name} />
-      <FieldRow label="电话" value={b.phone} />
-      <FieldRow label="邮箱" value={b.email} />
-      <FieldRow label="职位" value={b.title} />
-      <FieldRow label="地点" value={b.location} />
-      {resume.summary && <FieldRow label="简介" value={resume.summary} />}
+      <FieldRow label={t('fields.name')} value={b.name} />
+      <FieldRow label={t('fields.phone')} value={b.phone} />
+      <FieldRow label={t('fields.email')} value={b.email} />
+      <FieldRow label={t('fields.title')} value={b.title} />
+      <FieldRow label={t('fields.location')} value={b.location} />
+      {resume.summary && <FieldRow label={t('fields.summary')} value={resume.summary} />}
     </div>
   );
 }
 
 function WorkTab({ resume }: { resume: Resume }) {
+  const { t } = useTranslation();
   const work = resume.work;
-  if (!work?.length) return <p className="text-sm text-text-secondary">无工作经历</p>;
+  if (!work?.length) return <p className="text-sm text-text-secondary">{t('fields.noWork')}</p>;
   return (
     <div className="space-y-4">
       {work.map((w, i) => (
@@ -98,7 +102,7 @@ function WorkTab({ resume }: { resume: Resume }) {
               <p className="text-sm font-semibold text-text-primary">{w.company}</p>
               <p className="text-sm text-text-secondary">{w.position}</p>
             </div>
-            <span className="text-xs text-text-tertiary">{w.startDate} ~ {w.endDate || '至今'}</span>
+            <span className="text-xs text-text-tertiary">{w.startDate} ~ {w.endDate || t('fields.present')}</span>
           </div>
           {w.highlights && w.highlights.length > 0 && (
             <ul className="mt-2 space-y-1">
@@ -117,8 +121,9 @@ function WorkTab({ resume }: { resume: Resume }) {
 }
 
 function EducationTab({ resume }: { resume: Resume }) {
+  const { t } = useTranslation();
   const edu = resume.education;
-  if (!edu?.length) return <p className="text-sm text-text-secondary">无教育背景</p>;
+  if (!edu?.length) return <p className="text-sm text-text-secondary">{t('fields.noEducation')}</p>;
   return (
     <div className="space-y-3">
       {edu.map((e, i) => (
@@ -133,8 +138,9 @@ function EducationTab({ resume }: { resume: Resume }) {
 }
 
 function SkillsTab({ resume }: { resume: Resume }) {
+  const { t } = useTranslation();
   const skills = resume.skills;
-  if (!skills?.length) return <p className="text-sm text-text-secondary">无技能信息</p>;
+  if (!skills?.length) return <p className="text-sm text-text-secondary">{t('fields.noSkills')}</p>;
   return (
     <div className="flex flex-wrap gap-2">
       {skills.map((s: string, i: number) => (

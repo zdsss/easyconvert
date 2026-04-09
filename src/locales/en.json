@@ -58,6 +58,7 @@
     "noMatch": "No matching tasks",
     "createFirst": "Create your first evaluation task to get started",
     "tryFilter": "Try changing filter criteria",
+    "createEvaluation": "Create Evaluation",
     "processed": "Processed",
     "files": "Files",
     "filterAll": "All",
@@ -67,7 +68,23 @@
     "filterFailed": "Failed",
     "sortByDate": "By Date",
     "sortByName": "By Name",
-    "searchPlaceholder": "Search tasks..."
+    "searchPlaceholder": "Search tasks...",
+    "tabParsed": "Parsed Result",
+    "tabCompare": "Compare Annotation",
+    "tabTimeline": "Timeline",
+    "close": "Close",
+    "editAnnotation": "Edit Annotation",
+    "saveAnnotation": "Save Annotation",
+    "annotationPlaceholder": "Annotation value",
+    "noAnnotation": "No annotation data to compare",
+    "classification": "Classification",
+    "cache": "Cache",
+    "duration": "Duration",
+    "present": "Present",
+    "failed": "Failed",
+    "accuracy": "Accuracy",
+    "workCount": "Work Experience ({{count}})",
+    "eduCount": "Education ({{count}})"
   },
   "monitor": {
     "title": "Monitor Dashboard",
@@ -90,7 +107,14 @@
     "dataCollecting": "Collecting data, please wait...",
     "timeRange1h": "1 Hour",
     "timeRange24h": "24 Hours",
-    "timeRange7d": "7 Days"
+    "timeRange7d": "7 Days",
+    "processedCount": "Processed",
+    "cache": "Cache",
+    "refresh": "Refresh",
+    "errorRate": "Error Rate",
+    "p95Latency": "P95 Latency",
+    "dailyCost": "Daily Cost",
+    "alertExceeded": "{{label}} exceeded threshold: current {{value}}{{unit}}, threshold {{threshold}}{{unit}}"
   },
   "comparison": {
     "fieldComparison": "Field Comparison",
@@ -118,7 +142,13 @@
     "skills": "Skills",
     "projects": "Projects",
     "certificates": "Certificates",
-    "summary": "Summary"
+    "summary": "Summary",
+    "noBasics": "No basic info",
+    "noWork": "No work experience",
+    "noEducation": "No education",
+    "noSkills": "No skills",
+    "rawJson": "Raw JSON",
+    "present": "Present"
   },
   "timeline": {
     "title": "Processing Timeline",

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useEvaluationStore } from '@lib/store/evaluationStore';
 import { evaluationApi } from '@lib/api/evaluationApi';
 import { logger } from '@lib/logger';
@@ -13,11 +14,16 @@ import EvaluationCard from '@components/EvaluationCard';
 
 const PAGE_SIZE = 8;
 
-const FILTER_LABELS: Record<string, string> = {
-  all: '全部', pending: '待处理', processing: '处理中', completed: '已完成', failed: '失败',
+const FILTER_KEYS: Record<string, string> = {
+  all: 'evaluation.filterAll',
+  pending: 'evaluation.filterPending',
+  processing: 'evaluation.filterProcessing',
+  completed: 'evaluation.filterCompleted',
+  failed: 'evaluation.filterFailed',
 };
 
 export default function EvaluationList() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { tasks, setTasks, isLoading, setLoading } = useEvaluationStore();
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -82,19 +88,19 @@ export default function EvaluationList() {
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="page-title">评测任务</h1>
-          <p className="text-sm text-text-secondary mt-1">管理和追踪简历解析评测</p>
+          <h1 className="page-title">{t('evaluation.title')}</h1>
+          <p className="text-sm text-text-secondary mt-1">{t('evaluation.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
           {selectedIds.size === 2 && (
             <button onClick={() => setShowCompare(true)} className="btn-secondary flex items-center gap-2">
               <Icon name="columns" size={16} />
-              对比选中
+              {t('evaluation.compareSelected')}
             </button>
           )}
           <button onClick={() => navigate('/evaluation/new')} className="btn-primary flex items-center gap-2">
             <Icon name="plus" size={16} />
-            新建评测
+            {t('evaluation.newTask')}
           </button>
         </div>
       </div>
@@ -113,7 +119,7 @@ export default function EvaluationList() {
                     : 'bg-surface text-text-secondary border border-border hover:bg-surface-tertiary'
                 }`}
               >
-                {FILTER_LABELS[status]} ({count})
+                {t(FILTER_KEYS[status])} ({count})
               </button>
             ))}
           </div>
@@ -124,7 +130,7 @@ export default function EvaluationList() {
                 type="text"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                placeholder="搜索任务..."
+                placeholder={t('evaluation.searchPlaceholder')}
                 className="input pl-9 py-1.5 w-48"
               />
             </div>
@@ -133,8 +139,8 @@ export default function EvaluationList() {
               onChange={e => setSortBy(e.target.value as 'date' | 'name')}
               className="input py-1.5 w-auto"
             >
-              <option value="date">按时间</option>
-              <option value="name">按名称</option>
+              <option value="date">{t('evaluation.sortByDate')}</option>
+              <option value="name">{t('evaluation.sortByName')}</option>
             </select>
           </div>
         </div>
@@ -148,9 +154,9 @@ export default function EvaluationList() {
       ) : paginatedTasks.length === 0 ? (
         <EmptyState
           icon="clipboard"
-          title={tasks.length === 0 ? '暂无评测任务' : '无匹配任务'}
-          description={tasks.length === 0 ? '创建第一个评测任务来开始' : '尝试切换筛选条件'}
-          action={tasks.length === 0 ? { label: '创建评测', onClick: () => navigate('/evaluation/new') } : undefined}
+          title={tasks.length === 0 ? t('evaluation.noTasks') : t('evaluation.noMatch')}
+          description={tasks.length === 0 ? t('evaluation.createFirst') : t('evaluation.tryFilter')}
+          action={tasks.length === 0 ? { label: t('evaluation.createEvaluation'), onClick: () => navigate('/evaluation/new') } : undefined}
         />
       ) : (
         <>

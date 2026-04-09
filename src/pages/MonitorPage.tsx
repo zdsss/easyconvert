@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useMonitoringStore } from '@lib/store/monitoringStore';
 import MetricCard from '@components/ui/MetricCard';
 import DistributionChart from '@components/DistributionChart';
@@ -9,17 +10,11 @@ import AlertRulesSection from '@components/AlertRulesSection';
 import type { AlertRule } from '@components/AlertRulesSection';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-const TIME_RANGES = [
-  { label: '1小时', value: '1h' },
-  { label: '24小时', value: '24h' },
-  { label: '7天', value: '7d' },
+const TIME_RANGE_KEYS = [
+  { labelKey: 'monitor.timeRange1h', value: '1h' },
+  { labelKey: 'monitor.timeRange24h', value: '24h' },
+  { labelKey: 'monitor.timeRange7d', value: '7d' },
 ] as const;
-
-const DEFAULT_RULES: AlertRule[] = [
-  { id: 'errorRate', type: 'errorRate', threshold: 10, enabled: false, label: '错误率', unit: '%' },
-  { id: 'p95Latency', type: 'p95Latency', threshold: 3000, enabled: false, label: 'P95 延迟', unit: 'ms' },
-  { id: 'dailyCost', type: 'dailyCost', threshold: 10, enabled: false, label: '日成本', unit: '¥' },
-];
 
 const STORAGE_KEY = 'easyconvert-alert-rules';
 
@@ -40,8 +35,15 @@ function AlertToast({ message, onClose }: { message: string; onClose: () => void
 }
 
 export default function MonitorPage() {
+  const { t } = useTranslation();
   const { metrics, cacheStats, performance, cost, history, sync } = useMonitoringStore();
   const [timeRange, setTimeRange] = useState<string>('24h');
+
+  const DEFAULT_RULES: AlertRule[] = [
+    { id: 'errorRate', type: 'errorRate', threshold: 10, enabled: false, label: t('monitor.errorRate'), unit: '%' },
+    { id: 'p95Latency', type: 'p95Latency', threshold: 3000, enabled: false, label: t('monitor.p95Latency'), unit: 'ms' },
+    { id: 'dailyCost', type: 'dailyCost', threshold: 10, enabled: false, label: t('monitor.dailyCost'), unit: '¥' },
+  ];
 
   const [rules, setRules] = useState<AlertRule[]>(() => {
     try {
@@ -89,7 +91,7 @@ export default function MonitorPage() {
           setFiredAlerts(prev => new Set([...prev, alertKey]));
           setToasts(prev => [...prev, {
             id: alertKey,
-            message: `⚠️ ${rule.label} 超阈值：当前 ${value.toFixed(1)}${rule.unit}，阈值 ${rule.threshold}${rule.unit}`,
+            message: `⚠️ ${t('monitor.alertExceeded', { label: rule.label, value: value.toFixed(1), unit: rule.unit, threshold: rule.threshold })}`,
           }]);
         }
       }
@@ -113,18 +115,18 @@ export default function MonitorPage() {
     successRate: Math.round(h.successRate * 10) / 10,
   }));
 
-  const cacheHitData = { '命中': cacheStats.hits, '未命中': cacheStats.misses };
+  const cacheHitData = { [t('monitor.cacheHit')]: cacheStats.hits, [t('monitor.cacheMiss')]: cacheStats.misses };
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="page-title">监控仪表盘</h1>
-          <p className="text-sm text-text-secondary mt-1">实时系统指标和性能数据</p>
+          <h1 className="page-title">{t('monitor.title')}</h1>
+          <p className="text-sm text-text-secondary mt-1">{t('monitor.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex bg-surface-tertiary rounded-lg p-0.5">
-            {TIME_RANGES.map(r => (
+            {TIME_RANGE_KEYS.map(r => (
               <button
                 key={r.value}
                 onClick={() => setTimeRange(r.value)}
@@ -134,11 +136,11 @@ export default function MonitorPage() {
                     : 'text-text-secondary hover:text-text-primary'
                 }`}
               >
-                {r.label}
+                {t(r.labelKey)}
               </button>
             ))}
           </div>
-          <button onClick={sync} className="btn-ghost p-2" title="刷新">
+          <button onClick={sync} className="btn-ghost p-2" title={t('monitor.refresh')}>
             <Icon name="refresh" size={16} />
           </button>
         </div>
@@ -146,18 +148,18 @@ export default function MonitorPage() {
 
       {/* Metric cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <MetricCard title="总处理数" value={metrics.totalProcessed} icon="layers" sparklineData={processedSparkline} />
+        <MetricCard title={t('monitor.totalProcessed')} value={metrics.totalProcessed} icon="layers" sparklineData={processedSparkline} />
         <MetricCard
-          title="成功率" value={`${metrics.successRate.toFixed(1)}%`} icon="check-circle" color="text-status-success"
+          title={t('monitor.successRate')} value={`${metrics.successRate.toFixed(1)}%`} icon="check-circle" color="text-status-success"
           trend={displayHistory.length >= 2 ? {
             value: Math.round((displayHistory[displayHistory.length - 1].successRate - displayHistory[0].successRate) * 10) / 10,
             direction: displayHistory[displayHistory.length - 1].successRate >= displayHistory[0].successRate ? 'up' : 'down',
           } : undefined}
           sparklineData={successRateSparkline}
         />
-        <MetricCard title="缓存命中率" value={`${metrics.cacheHitRate.toFixed(1)}%`} icon="zap" color="text-status-info" sparklineData={cacheRateSparkline} />
+        <MetricCard title={t('monitor.cacheHitRate')} value={`${metrics.cacheHitRate.toFixed(1)}%`} icon="zap" color="text-status-info" sparklineData={cacheRateSparkline} />
         <MetricCard
-          title="平均耗时" value={`${(metrics.avgTime / 1000).toFixed(2)}s`} icon="clock" color="text-status-warning"
+          title={t('monitor.avgTime')} value={`${(metrics.avgTime / 1000).toFixed(2)}s`} icon="clock" color="text-status-warning"
           trend={displayHistory.length >= 2 ? {
             value: Math.round(((displayHistory[displayHistory.length - 1].avgTime - displayHistory[0].avgTime) / Math.max(displayHistory[0].avgTime, 1)) * -100 * 10) / 10,
             direction: displayHistory[displayHistory.length - 1].avgTime <= displayHistory[0].avgTime ? 'up' : 'down',
@@ -171,7 +173,7 @@ export default function MonitorPage() {
         <div className="lg:col-span-2 card p-5">
           <h3 className="section-title flex items-center gap-2 mb-4">
             <Icon name="activity" size={16} className="text-text-tertiary" />
-            处理趋势
+            {t('monitor.trend')}
           </h3>
           <div style={{ height: 280 }}>
             {trendData.length > 1 ? (
@@ -184,7 +186,7 @@ export default function MonitorPage() {
                     contentStyle={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '8px', fontSize: '12px' }}
                     formatter={(value: number, name: string) => [
                       name === 'count' ? value : `${value}%`,
-                      name === 'count' ? '处理数' : '成功率',
+                      name === 'count' ? t('monitor.processedCount') : t('monitor.successRate'),
                     ]}
                   />
                   <Line type="monotone" dataKey="count" stroke="#2563EB" strokeWidth={2} dot={false} />
@@ -193,7 +195,7 @@ export default function MonitorPage() {
               </ResponsiveContainer>
             ) : (
               <div className="flex items-center justify-center h-full text-text-tertiary text-sm">
-                数据采集中，请稍候...
+                {t('monitor.dataCollecting')}
               </div>
             )}
           </div>
@@ -203,18 +205,18 @@ export default function MonitorPage() {
         <div className="card p-5">
           <h3 className="section-title flex items-center gap-2 mb-4">
             <Icon name="pie-chart" size={16} className="text-text-tertiary" />
-            缓存命中率
+            {t('monitor.cacheHitRate')}
           </h3>
           <div style={{ height: 220 }}>
-            <DistributionChart data={cacheHitData} title="缓存" />
+            <DistributionChart data={cacheHitData} title={t('monitor.cache')} />
           </div>
           <div className="mt-3 grid grid-cols-2 gap-3">
             <div className="p-3 bg-status-success-bg dark:bg-emerald-900/20 rounded-lg text-center">
-              <p className="text-xs text-text-secondary">命中</p>
+              <p className="text-xs text-text-secondary">{t('monitor.cacheHit')}</p>
               <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400">{cacheStats.hits}</p>
             </div>
             <div className="p-3 bg-status-error/10 rounded-lg text-center">
-              <p className="text-xs text-text-secondary">未命中</p>
+              <p className="text-xs text-text-secondary">{t('monitor.cacheMiss')}</p>
               <p className="text-lg font-bold text-status-error">{cacheStats.misses}</p>
             </div>
           </div>
