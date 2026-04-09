@@ -1,4 +1,4 @@
-const API_BASE = '/api';
+import { apiFetch, buildQuery } from './client';
 
 export interface ApiKey {
   id: string;
@@ -33,36 +33,28 @@ export interface ApiOverviewData {
 }
 
 export const apiManagementApi = {
-  async getKeys(tenantId: string = 'default'): Promise<ApiKey[]> {
-    const res = await fetch(`${API_BASE}/keys?tenantId=${tenantId}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
-    return res.json();
+  async getKeys(tenantId = 'default', signal?: AbortSignal): Promise<ApiKey[]> {
+    return apiFetch(`/keys${buildQuery({ tenantId })}`, { signal });
   },
 
-  async createKey(data: { name: string; tenantId?: string; scopes?: string[]; rateLimit?: number; expiresAt?: string }): Promise<ApiKey> {
-    const res = await fetch(`${API_BASE}/keys`, {
+  async createKey(data: { name: string; tenantId?: string; scopes?: string[]; rateLimit?: number; expiresAt?: string }, signal?: AbortSignal): Promise<ApiKey> {
+    return apiFetch('/keys', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...data, tenantId: data.tenantId || 'default' }),
+      signal,
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
-    return res.json();
   },
 
-  async deleteKey(id: string): Promise<void> {
-    const res = await fetch(`${API_BASE}/keys/${id}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+  async deleteKey(id: string, signal?: AbortSignal): Promise<void> {
+    return apiFetch(`/keys/${id}`, { method: 'DELETE', signal });
   },
 
-  async getUsageStats(tenantId: string = 'default', days: number = 7): Promise<UsageStats> {
-    const res = await fetch(`${API_BASE}/usage?tenantId=${tenantId}&days=${days}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
-    return res.json();
+  async getUsageStats(tenantId = 'default', days = 7, signal?: AbortSignal): Promise<UsageStats> {
+    return apiFetch(`/usage${buildQuery({ tenantId, days })}`, { signal });
   },
 
-  async getApiOverview(tenantId: string = 'default'): Promise<ApiOverviewData> {
-    const res = await fetch(`${API_BASE}/usage/overview?tenantId=${tenantId}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
-    return res.json();
+  async getApiOverview(tenantId = 'default', signal?: AbortSignal): Promise<ApiOverviewData> {
+    return apiFetch(`/usage/overview${buildQuery({ tenantId })}`, { signal });
   },
 };

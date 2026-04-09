@@ -20,13 +20,13 @@ describe('apiManagementApi', () => {
   it('getKeys fetches with tenantId', async () => {
     mockFetch.mockResolvedValue(okResponse([]));
     await apiManagementApi.getKeys('tenant-1');
-    expect(mockFetch).toHaveBeenCalledWith('/api/keys?tenantId=tenant-1');
+    expect(mockFetch.mock.calls[0][0]).toBe('/api/keys?tenantId=tenant-1');
   });
 
   it('getKeys uses default tenantId', async () => {
     mockFetch.mockResolvedValue(okResponse([]));
     await apiManagementApi.getKeys();
-    expect(mockFetch).toHaveBeenCalledWith('/api/keys?tenantId=default');
+    expect(mockFetch.mock.calls[0][0]).toBe('/api/keys?tenantId=default');
   });
 
   it('createKey sends POST with body', async () => {
@@ -43,13 +43,14 @@ describe('apiManagementApi', () => {
   it('deleteKey sends DELETE', async () => {
     mockFetch.mockResolvedValue(okResponse(undefined));
     await apiManagementApi.deleteKey('key-1');
-    expect(mockFetch).toHaveBeenCalledWith('/api/keys/key-1', { method: 'DELETE' });
+    expect(mockFetch.mock.calls[0][0]).toBe('/api/keys/key-1');
+    expect(mockFetch.mock.calls[0][1]).toMatchObject({ method: 'DELETE' });
   });
 
   it('getUsageStats fetches with params', async () => {
     mockFetch.mockResolvedValue(okResponse({ totalRequests: 100 }));
     await apiManagementApi.getUsageStats('tenant-1', 30);
-    expect(mockFetch).toHaveBeenCalledWith('/api/usage?tenantId=tenant-1&days=30');
+    expect(mockFetch.mock.calls[0][0]).toBe('/api/usage?tenantId=tenant-1&days=30');
   });
 
   it('getApiOverview fetches overview', async () => {

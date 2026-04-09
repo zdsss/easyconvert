@@ -1,4 +1,4 @@
-const API_BASE = '/api/parse-history';
+import { apiFetch, buildQuery } from './client';
 
 export interface ParseHistoryItem {
   id: string;
@@ -22,19 +22,12 @@ export interface ParseHistoryListResponse {
 }
 
 export const parseHistoryApi = {
-  async list(page = 1, limit = 20, status?: string, search?: string): Promise<ParseHistoryListResponse> {
-    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
-    if (status) params.set('status', status);
-    if (search) params.set('search', search);
-    const res = await fetch(`${API_BASE}?${params}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
-    return res.json();
+  async list(page = 1, limit = 20, status?: string, search?: string, signal?: AbortSignal): Promise<ParseHistoryListResponse> {
+    return apiFetch(`/parse-history${buildQuery({ page, limit, status, search })}`, { signal });
   },
 
-  async get(id: string): Promise<ParseHistoryItem> {
-    const res = await fetch(`${API_BASE}/${id}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
-    return res.json();
+  async get(id: string, signal?: AbortSignal): Promise<ParseHistoryItem> {
+    return apiFetch(`/parse-history/${id}`, { signal });
   },
 
   async save(data: {
@@ -46,23 +39,20 @@ export const parseHistoryApi = {
     result?: unknown;
     error?: string;
     processingTime?: number;
-  }): Promise<ParseHistoryItem> {
-    const res = await fetch(API_BASE, {
+  }, signal?: AbortSignal): Promise<ParseHistoryItem> {
+    return apiFetch('/parse-history', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
+      signal,
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
-    return res.json();
   },
 
-  async remove(id: string): Promise<void> {
-    const res = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+  async remove(id: string, signal?: AbortSignal): Promise<void> {
+    return apiFetch(`/parse-history/${id}`, { method: 'DELETE', signal });
   },
 
-  async clearAll(): Promise<void> {
-    const res = await fetch(API_BASE, { method: 'DELETE' });
-    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+  async clearAll(signal?: AbortSignal): Promise<void> {
+    return apiFetch('/parse-history', { method: 'DELETE', signal });
   },
 };
