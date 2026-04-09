@@ -11,7 +11,7 @@ export default function DistributionChart({ data, title }: Props) {
   const chartData = Object.entries(data).map(([name, value]) => ({ name, value }));
 
   if (chartData.length === 0) {
-    return <div className="flex items-center justify-center h-full text-gray-400 text-sm">暂无{title}数据</div>;
+    return <div className="flex items-center justify-center h-full text-text-tertiary text-sm">暂无{title}数据</div>;
   }
 
   return (

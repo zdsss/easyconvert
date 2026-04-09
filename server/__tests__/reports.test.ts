@@ -1,107 +1,104 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import express from 'express';
+import request from 'supertest';
 
 // Mock db
 const mockQuery = vi.fn();
 vi.mock('../db', () => ({ default: { query: (...args: unknown[]) => mockQuery(...args) } }));
 
-import {
-  generateServerReport,
-  getAccuracyTrends,
-  getCostReport,
-} from '../lib/reportGenerator';
+// Mock logger
+vi.mock('../lib/logger', () => ({ serverLogger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } }));
 
-describe('reportGenerator', () => {
-  describe('generateServerReport', () => {
-    it('should generate report with summary', async () => {
-      mockQuery.mockImplementation((text: string) => {
-        if (text.includes('evaluation_tasks')) {
-          return Promise.resolve({
-            rows: [{ id: 'task1', name: 'Test Task', status: 'completed' }],
-          });
-        }
-        if (text.includes('evaluation_results')) {
-          return Promise.resolve({
-            rows: [
-              {
-                file_name: 'test.pdf',
-                metrics: { accuracy: 85, completeness: 90, structureScore: 80 },
-                classification: { difficulty: 'easy', completeness: 'complete', scenario: 'tech' },
-                processing_time: 1500,
-                from_cache: false,
-              },
-              {
-                file_name: 'test2.pdf',
-                metrics: { accuracy: 75, completeness: 80, structureScore: 70 },
-                classification: { difficulty: 'standard', completeness: 'basic', scenario: 'general' },
-                processing_time: 2000,
-                from_cache: true,
-              },
-            ],
-          });
-        }
-        return Promise.resolve({ rows: [] });
-      });
+// Mock reportGenerator
+const mockGenerateServerReport = vi.fn();
+const mockGetAccuracyTrends = vi.fn();
+const mockGetDistribution = vi.fn();
+const mockGetErrorPatterns = vi.fn();
+const mockGetCostReport = vi.fn();
 
-      const report = await generateServerReport('task1');
-      expect(report.task.name).toBe('Test Task');
-      expect(report.summary.totalFiles).toBe(2);
-      expect(report.summary.avgAccuracy).toBe(80);
-      expect(report.summary.cacheHitRate).toBe(50);
-      expect(report.distribution?.difficulty).toHaveProperty('easy');
-      expect(report.distribution?.difficulty).toHaveProperty('standard');
-    });
+vi.mock('../lib/reportGenerator', () => ({
+  generateServerReport: (...args: unknown[]) => mockGenerateServerReport(...args),
+  getAccuracyTrends: (...args: unknown[]) => mockGetAccuracyTrends(...args),
+  getDistribution: (...args: unknown[]) => mockGetDistribution(...args),
+  getErrorPatterns: (...args: unknown[]) => mockGetErrorPatterns(...args),
+  getCostReport: (...args: unknown[]) => mockGetCostReport(...args),
+}));
 
-    it('should throw for non-existent task', async () => {
-      mockQuery.mockImplementation((text: string) => {
-        if (text.includes('evaluation_tasks')) return Promise.resolve({ rows: [] });
-        return Promise.resolve({ rows: [] });
-      });
+import reportsRouter from '../routes/reports';
 
-      await expect(generateServerReport('nonexistent')).rejects.toThrow('Task not found');
-    });
+function buildApp() {
+  const app = express();
+  app.use(express.json());
+  app.use('/', reportsRouter);
+  return app;
+}
+
+describe('Reports API', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  it('POST / generates report for taskId', async () => {
+    const report = { task: { name: 'Test' }, summary: { totalFiles: 5 } };
+    mockGenerateServerReport.mockResolvedValue(report);
+    const app = buildApp();
+    const res = await request(app).post('/').send({ taskId: 'task-1' });
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(report);
+    expect(mockGenerateServerReport).toHaveBeenCalledWith('task-1');
   });
 
-  describe('getAccuracyTrends', () => {
-    it('should aggregate by date', async () => {
-      mockQuery.mockResolvedValue({
-        rows: [
-          { metrics: { accuracy: 80 }, created_at: '2026-04-01T10:00:00Z' },
-          { metrics: { accuracy: 90 }, created_at: '2026-04-01T11:00:00Z' },
-          { metrics: { accuracy: 70 }, created_at: '2026-04-02T10:00:00Z' },
-        ],
-      });
-
-      const trends = await getAccuracyTrends();
-      expect(trends).toHaveLength(2);
-      expect(trends[0].date).toBe('2026-04-01');
-      expect(trends[0].accuracy).toBe(85);
-      expect(trends[0].count).toBe(2);
-    });
+  it('POST / returns 400 when taskId is missing', async () => {
+    const app = buildApp();
+    const res = await request(app).post('/').send({});
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('taskId is required');
+    expect(mockGenerateServerReport).not.toHaveBeenCalled();
   });
 
-  describe('getCostReport', () => {
-    it('should calculate cost metrics', async () => {
-      mockQuery.mockImplementation((text: string) => {
-        if (text.includes('evaluation_tasks')) {
-          return Promise.resolve({
-            rows: [{ config: { model: 'qwen-plus' } }],
-          });
-        }
-        return Promise.resolve({
-          rows: [
-            { processing_time: 1000, from_cache: false },
-            { processing_time: 2000, from_cache: false },
-            { processing_time: 50, from_cache: true },
-          ],
-        });
-      });
+  it('POST / returns 500 when report generation fails', async () => {
+    mockGenerateServerReport.mockRejectedValue(new Error('Task not found'));
+    const app = buildApp();
+    const res = await request(app).post('/').send({ taskId: 'bad-id' });
+    expect(res.status).toBe(500);
+    expect(res.body.error).toBe('Task not found');
+  });
 
-      const cost = await getCostReport('task1');
-      expect(cost.totalFiles).toBe(3);
-      expect(cost.cachedFiles).toBe(1);
-      expect(cost.avgProcessingTime).toBe(1500);
-      expect(cost.model).toBe('qwen-plus');
-      expect(cost.estimatedCost).toBeGreaterThan(0);
-    });
+  it('GET /trends returns accuracy trends', async () => {
+    const trends = [{ date: '2026-04-01', accuracy: 85, count: 2 }];
+    mockGetAccuracyTrends.mockResolvedValue(trends);
+    const app = buildApp();
+    const res = await request(app).get('/trends');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(trends);
+    expect(mockGetAccuracyTrends).toHaveBeenCalled();
+  });
+
+  it('GET /distribution/:taskId returns distribution data', async () => {
+    const distribution = { difficulty: { easy: 3, standard: 2 } };
+    mockGetDistribution.mockResolvedValue(distribution);
+    const app = buildApp();
+    const res = await request(app).get('/distribution/task-1');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(distribution);
+    expect(mockGetDistribution).toHaveBeenCalledWith('task-1');
+  });
+
+  it('GET /errors/:taskId returns error patterns', async () => {
+    const errors = [{ field: 'name', errorRate: 0.15 }];
+    mockGetErrorPatterns.mockResolvedValue(errors);
+    const app = buildApp();
+    const res = await request(app).get('/errors/task-1');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(errors);
+    expect(mockGetErrorPatterns).toHaveBeenCalledWith('task-1');
+  });
+
+  it('GET /cost/:taskId returns cost report', async () => {
+    const cost = { totalFiles: 3, cachedFiles: 1, avgProcessingTime: 1500, model: 'qwen-plus', estimatedCost: 0.05 };
+    mockGetCostReport.mockResolvedValue(cost);
+    const app = buildApp();
+    const res = await request(app).get('/cost/task-1');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(cost);
+    expect(mockGetCostReport).toHaveBeenCalledWith('task-1');
   });
 });

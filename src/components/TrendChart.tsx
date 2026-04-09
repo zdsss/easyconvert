@@ -28,7 +28,7 @@ export default function TrendChart({
   xKey = 'date',
 }: Props) {
   if (data.length === 0) {
-    return <div className="flex items-center justify-center h-full text-gray-400 text-sm">暂无趋势数据</div>;
+    return <div className="flex items-center justify-center h-full text-text-tertiary text-sm">暂无趋势数据</div>;
   }
 
   const defaultFormatter = (value: number) => [`${value.toFixed(1)}%`, '准确率'] as [string, string];

@@ -42,6 +42,19 @@ describe('Prompt Experiments API', () => {
     );
   });
 
+  it('GET /:id returns experiment by id', async () => {
+    const experiment = { id: 'exp-1', task_ids: '["t1"]', weak_fields: '["name"]', suggestion: 'test' };
+    mockQuery.mockResolvedValue({ rows: [experiment] });
+    const app = buildApp();
+    const res = await request(app).get('/exp-1');
+    expect(res.status).toBe(200);
+    expect(res.body.id).toBe('exp-1');
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining('WHERE id = $1'),
+      ['exp-1']
+    );
+  });
+
   it('GET /:id returns 404 for non-existent id', async () => {
     mockQuery.mockResolvedValue({ rows: [] });
     const app = buildApp();
@@ -65,6 +78,19 @@ describe('Prompt Experiments API', () => {
     const res = await request(app).put('/non-existent').send({ suggestion: 'test' });
     expect(res.status).toBe(404);
     expect(res.body.error).toMatch(/not found/i);
+  });
+
+  it('DELETE /:id deletes experiment', async () => {
+    mockQuery.mockResolvedValue({ rows: [{ id: 'exp-1' }] });
+    const app = buildApp();
+    const res = await request(app).delete('/exp-1');
+    expect(res.status).toBe(200);
+    expect(res.body.message).toBe('Deleted');
+    expect(res.body.id).toBe('exp-1');
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining('DELETE FROM prompt_experiments'),
+      ['exp-1']
+    );
   });
 
   it('DELETE /:id returns 404 for non-existent id', async () => {
