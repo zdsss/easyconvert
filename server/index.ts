@@ -15,6 +15,7 @@ import { serverLogger } from './lib/logger';
 import { swaggerSpec } from './lib/swagger';
 import { deliverWebhook } from './lib/webhookDelivery';
 import { errorHandler } from './middleware/errorHandler';
+import { config } from './lib/config';
 import evaluationsRouter from './routes/evaluations';
 import annotationsRouter from './routes/annotations';
 import reportsRouter from './routes/reports';
@@ -28,12 +29,11 @@ import promptExpRouter from './routes/promptExperiments';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
-const PORT = process.env.PORT || 3001;
 
-// Multer 配置 — 内存存储，10MB 限制
+// Multer 配置 — 内存存储
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: config.upload.maxFileSize },
   fileFilter: (_req, file, cb) => {
     const allowed = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/msword'];
     if (allowed.includes(file.mimetype)) {
@@ -47,7 +47,7 @@ const upload = multer({
 // 全局中间件
 app.use(helmet({ contentSecurityPolicy: false })); // CSP disabled for SPA compatibility
 app.use(cors());
-app.use(express.json({ limit: '50mb' }));
+app.use(express.json({ limit: config.upload.maxBodySize }));
 app.use(requestLoggerMiddleware);
 
 // 静态文件
@@ -132,8 +132,8 @@ app.use(errorHandler);
 async function start() {
   try {
     await runMigrations();
-    const server = app.listen(PORT, () => {
-      serverLogger.info(`Server running on port ${PORT}`);
+    const server = app.listen(config.port, () => {
+      serverLogger.info(`Server running on port ${config.port}`);
     });
 
     const shutdown = (signal: string) => {

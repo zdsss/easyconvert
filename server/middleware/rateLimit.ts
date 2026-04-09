@@ -1,5 +1,6 @@
 import type { Response, NextFunction } from 'express';
 import type { AuthenticatedRequest } from '../types';
+import { config } from '../lib/config';
 
 interface RateLimitEntry {
   timestamps: number[];
@@ -8,8 +9,7 @@ interface RateLimitEntry {
 // 内存 Map 按 API Key 追踪请求时间戳
 const rateLimitStore = new Map<string, RateLimitEntry>();
 
-const DEFAULT_WINDOW_MS = 60 * 1000; // 1 分钟窗口
-const DEFAULT_MAX_REQUESTS = 100;
+const { windowMs: DEFAULT_WINDOW_MS, defaultMaxRequests: DEFAULT_MAX_REQUESTS } = config.rateLimit;
 
 /**
  * 滑动窗口限流中间件

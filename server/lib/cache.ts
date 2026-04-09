@@ -1,10 +1,9 @@
 import db from '../db';
 import { serverLogger } from './logger';
+import { config } from './config';
 import type { CacheData } from '@shared/types';
 
-const CACHE_TTL_DAYS = 30;
-const CACHE_MAX_ENTRIES = 5000;
-const VERSION = '2.0';
+const { ttlDays: CACHE_TTL_DAYS, maxEntries: CACHE_MAX_ENTRIES, version: VERSION } = config.cache;
 
 /**
  * 服务端缓存后端 — PostgreSQL parse_cache 表
