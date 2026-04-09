@@ -349,7 +349,7 @@ export default function EvaluationDetail() {
                               }
                               setSelectedRows(next);
                             }}
-                            className="rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                            className="rounded border-border text-brand-600 focus:ring-brand-500"
                           />
                         </td>
                         <td className="px-4 py-3 font-medium text-text-primary">

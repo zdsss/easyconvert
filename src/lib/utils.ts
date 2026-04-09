@@ -32,5 +32,5 @@ export const STATUS_MAP: Record<string, { label: string; class: string; dotClass
   completed: { label: '已完成', class: 'badge-success', dotClass: 'bg-status-success' },
   processing: { label: '处理中', class: 'badge-info', dotClass: 'bg-status-info animate-pulse' },
   failed: { label: '失败', class: 'badge-error', dotClass: 'bg-status-error' },
-  pending: { label: '待处理', class: 'badge-neutral', dotClass: 'bg-gray-400' },
+  pending: { label: '待处理', class: 'badge-neutral', dotClass: 'bg-text-tertiary' },
 };

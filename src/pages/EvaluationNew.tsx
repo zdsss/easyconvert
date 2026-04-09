@@ -207,7 +207,7 @@ export default function EvaluationNew() {
                     type="checkbox"
                     checked={formData.config[opt.key as keyof typeof formData.config] as boolean}
                     onChange={e => updateConfig(opt.key, e.target.checked)}
-                    className="mt-0.5 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                    className="mt-0.5 rounded border-border text-brand-600 focus:ring-brand-500"
                   />
                   <div>
                     <span className="text-sm font-medium text-text-primary">{opt.label}</span>
@@ -255,7 +255,7 @@ export default function EvaluationNew() {
                 type="file"
                 accept=".json"
                 onChange={e => setAnnotationFile(e.target.files?.[0] || null)}
-                className="text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-surface-tertiary file:text-text-secondary hover:file:bg-gray-200"
+                className="text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-surface-tertiary file:text-text-secondary hover:file:bg-surface-secondary"
               />
               {annotationFile && <p className="text-xs text-text-tertiary mt-1">{annotationFile.name}</p>}
               <p className="text-xs text-text-tertiary mt-2">上传 JSON 格式的标注数据，用于计算准确率</p>

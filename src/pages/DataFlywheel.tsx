@@ -156,7 +156,7 @@ export default function DataFlywheel() {
                       type="checkbox"
                       checked={selected.size === candidates.length && candidates.length > 0}
                       onChange={toggleAll}
-                      className="rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                      className="rounded border-border text-brand-600 focus:ring-brand-500"
                     />
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-text-secondary uppercase tracking-wide">文件名</th>
@@ -176,7 +176,7 @@ export default function DataFlywheel() {
                         type="checkbox"
                         checked={selected.has(c.id)}
                         onChange={() => toggleSelect(c.id)}
-                        className="rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                        className="rounded border-border text-brand-600 focus:ring-brand-500"
                       />
                     </td>
                     <td className="px-4 py-3">

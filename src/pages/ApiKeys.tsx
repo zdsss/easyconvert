@@ -143,7 +143,7 @@ export default function ApiKeys() {
                             : createForm.scopes.filter(s => s !== scope);
                           setCreateForm({ ...createForm, scopes });
                         }}
-                        className="rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                        className="rounded border-border text-brand-600 focus:ring-brand-500"
                       />
                       {scope}
                     </label>
