@@ -3,14 +3,19 @@ import { useNavigate } from 'react-router-dom';
 import { useEvaluationStore } from '@lib/store/evaluationStore';
 import { evaluationApi } from '@lib/api/evaluationApi';
 import { logger } from '@lib/logger';
-import { adaptTaskResponse, STATUS_MAP } from '@lib/utils';
+import { adaptTaskResponse } from '@lib/utils';
 import Icon from '@components/ui/Icon';
 import EmptyState from '@components/ui/EmptyState';
 import Pagination from '@components/ui/Pagination';
 import { SkeletonCard } from '@components/ui/Skeleton';
 import EvaluationCompareModal from '@components/EvaluationCompareModal';
+import EvaluationCard from '@components/EvaluationCard';
 
 const PAGE_SIZE = 8;
+
+const FILTER_LABELS: Record<string, string> = {
+  all: '全部', pending: '待处理', processing: '处理中', completed: '已完成', failed: '失败',
+};
 
 export default function EvaluationList() {
   const navigate = useNavigate();
@@ -59,8 +64,14 @@ export default function EvaluationList() {
     failed: tasks.filter(t => t.status === 'failed').length,
   };
 
-  const FILTER_LABELS: Record<string, string> = {
-    all: '全部', pending: '待处理', processing: '处理中', completed: '已完成', failed: '失败',
+  const toggleSelect = (taskId: string, checked: boolean) => {
+    const next = new Set(selectedIds);
+    if (checked) {
+      if (next.size < 2) next.add(taskId);
+    } else {
+      next.delete(taskId);
+    }
+    setSelectedIds(next);
   };
 
   return (
@@ -141,84 +152,15 @@ export default function EvaluationList() {
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {paginatedTasks.map(task => {
-              const statusInfo = STATUS_MAP[task.status] || STATUS_MAP.pending;
-              const total = task.stats.totalFiles;
-              const processed = task.stats.processedFiles || (task.stats.successCount + task.stats.failureCount);
-              const progressPct = total > 0 ? (processed / total) * 100 : 0;
-
-              return (
-                <div
-                  key={task.id}
-                  className={`card-hover p-5 cursor-pointer group relative ${selectedIds.has(task.id) ? 'ring-2 ring-brand-500' : ''}`}
-                >
-                  <div className="absolute top-3 right-3 z-10" onClick={e => e.stopPropagation()}>
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.has(task.id)}
-                      onChange={e => {
-                        const next = new Set(selectedIds);
-                        if (e.target.checked) {
-                          if (next.size < 2) next.add(task.id);
-                        } else {
-                          next.delete(task.id);
-                        }
-                        setSelectedIds(next);
-                      }}
-                      className="w-4 h-4 rounded border-border text-brand-600 focus:ring-brand-500 cursor-pointer"
-                    />
-                  </div>
-                  <div onClick={() => navigate(`/evaluation/${task.id}`)}>
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full shrink-0 ${statusInfo.dotClass}`} />
-                        <span className={statusInfo.class}>{statusInfo.label}</span>
-                      </div>
-                      <h3 className="text-base font-semibold text-text-primary truncate mt-1.5 group-hover:text-brand-700 dark:group-hover:text-brand-400 transition-colors">
-                        {task.name}
-                      </h3>
-                      {task.description && (
-                        <p className="text-sm text-text-secondary mt-0.5 truncate">{task.description}</p>
-                      )}
-                    </div>
-                    <Icon name="chevron-right" size={18} className="text-text-tertiary group-hover:text-brand-500 transition-colors shrink-0 mt-1" />
-                  </div>
-
-                  {/* Progress bar */}
-                  {total > 0 && (
-                    <div className="mb-3">
-                      <div className="flex justify-between text-xs text-text-tertiary mb-1">
-                        <span>{processed}/{total} 已处理</span>
-                        <span>{progressPct.toFixed(0)}%</span>
-                      </div>
-                      <div className="w-full bg-surface-tertiary rounded-full h-1.5 overflow-hidden">
-                        <div className="bg-brand-600 h-1.5 transition-all duration-500 rounded-full" style={{ width: `${progressPct}%` }} />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Mini metrics */}
-                  <div className="flex gap-4 text-sm text-text-secondary">
-                    <span className="flex items-center gap-1">
-                      <Icon name="file-text" size={14} className="text-text-tertiary" />
-                      {total} 文件
-                    </span>
-                    <span className="flex items-center gap-1 text-status-success">
-                      <Icon name="check-circle" size={14} />
-                      {task.stats.successCount}
-                    </span>
-                    {task.stats.failureCount > 0 && (
-                      <span className="flex items-center gap-1 text-status-error">
-                        <Icon name="x-circle" size={14} />
-                        {task.stats.failureCount}
-                      </span>
-                    )}
-                  </div>
-                  </div>
-                </div>
-              );
-            })}
+            {paginatedTasks.map(task => (
+              <EvaluationCard
+                key={task.id}
+                task={task}
+                selected={selectedIds.has(task.id)}
+                onSelect={checked => toggleSelect(task.id, checked)}
+                onClick={() => navigate(`/evaluation/${task.id}`)}
+              />
+            ))}
           </div>
 
           <Pagination
