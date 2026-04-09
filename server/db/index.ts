@@ -3,6 +3,7 @@ import { betterSqliteDb } from './sqlite';
 import { getKysely } from './kysely';
 import type { DB } from './schema';
 import type { Kysely } from 'kysely';
+import { serverLogger } from '../lib/logger';
 
 export interface QueryResult<T = Record<string, unknown>> {
   rows: T[];
@@ -10,8 +11,7 @@ export interface QueryResult<T = Record<string, unknown>> {
 }
 
 export interface Database {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  query<T = Record<string, any>>(text: string, params?: unknown[]): Promise<QueryResult<T>>;
+  query<T = Record<string, unknown>>(text: string, params?: unknown[]): Promise<QueryResult<T>>;
 }
 
 // 支持 DATABASE_URL 或分开的 DB_* 变量
@@ -32,9 +32,9 @@ if (DATABASE_URL) {
     },
   };
 
-  console.log('✓ Using PostgreSQL database');
+  serverLogger.info('Using PostgreSQL database');
 } else {
-  console.warn('⚠ DATABASE_URL not set, using SQLite in-memory storage');
+  serverLogger.warn('DATABASE_URL not set, using SQLite in-memory storage');
   db = betterSqliteDb;
 }
 

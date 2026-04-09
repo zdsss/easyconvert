@@ -50,15 +50,16 @@ router.get('/', asyncHandler(async (req: Request, res: Response) => {
     params.push(status);
   }
   if (search) {
+    const sanitizedSearch = search.slice(0, 100);
     where += ` AND file_name ILIKE $${paramIdx++}`;
-    params.push(`%${search}%`);
+    params.push(`%${sanitizedSearch}%`);
   }
 
   const countResult = await db.query(
     `SELECT COUNT(*) FROM parse_jobs ${where}`,
     params
   );
-  const total = parseInt(countResult.rows[0]?.count || '0');
+  const total = parseInt(String(countResult.rows[0]?.count ?? '0'));
 
   const dataResult = await db.query(
     `SELECT id, status, file_name, file_hash, file_size, mime_type, error, processing_time, created_at, completed_at

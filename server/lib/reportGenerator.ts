@@ -2,6 +2,12 @@ import db from '../db';
 import { calculateCost, DEFAULT_MODEL } from '@shared/pricing';
 import { serverCostTracker } from './extractWithLLM';
 
+/** Type-safe query helper to avoid `as unknown as T` double casts */
+async function queryRows<T>(sql: string, params?: unknown[]): Promise<T[]> {
+  const result = await db.query(sql, params);
+  return result.rows as T[];
+}
+
 interface EvaluationResultRow {
   id: string;
   task_id: string;
@@ -61,10 +67,9 @@ export interface ReportData {
  */
 export async function generateServerReport(taskId: string): Promise<ReportData> {
   const taskResult = await db.query('SELECT * FROM evaluation_tasks WHERE id = $1', [taskId]);
-  const resultsResult = await db.query('SELECT * FROM evaluation_results WHERE task_id = $1', [taskId]);
+  const results = await queryRows<EvaluationResultRow>('SELECT * FROM evaluation_results WHERE task_id = $1', [taskId]);
 
   const task = taskResult.rows[0] as TaskRow | undefined;
-  const results = resultsResult.rows as unknown as EvaluationResultRow[];
 
   if (!task) throw new Error('Task not found');
 
@@ -122,29 +127,28 @@ export async function getAccuracyTrends(): Promise<Array<{ date: string; accurac
  * 单任务分类分布
  */
 export async function getDistribution(taskId: string) {
-  const results = await db.query('SELECT classification FROM evaluation_results WHERE task_id = $1', [taskId]);
-  return buildDistribution(results.rows as unknown as EvaluationResultRow[]);
+  const results = await queryRows<EvaluationResultRow>('SELECT classification FROM evaluation_results WHERE task_id = $1', [taskId]);
+  return buildDistribution(results);
 }
 
 /**
  * 错误模式分析
  */
 export async function getErrorPatterns(taskId: string) {
-  const results = await db.query(
+  const results = await queryRows<EvaluationResultRow>(
     'SELECT file_name, metrics, parsed_resume FROM evaluation_results WHERE task_id = $1',
     [taskId]
   );
-  return analyzeErrors(results.rows as unknown as EvaluationResultRow[]);
+  return analyzeErrors(results);
 }
 
 /**
  * 成本追踪
  */
 export async function getCostReport(taskId: string) {
-  // Fetch task config (may contain model) + results in parallel
-  const [taskResult, resultsResult] = await Promise.all([
+  const [taskResult, rows] = await Promise.all([
     db.query('SELECT config FROM evaluation_tasks WHERE id = $1', [taskId]),
-    db.query(
+    queryRows<EvaluationResultRow>(
       'SELECT processing_time, from_cache FROM evaluation_results WHERE task_id = $1',
       [taskId]
     ),
@@ -153,7 +157,6 @@ export async function getCostReport(taskId: string) {
   const taskConfig = taskResult.rows[0]?.config;
   const model = (typeof taskConfig === 'string' ? JSON.parse(taskConfig) : taskConfig)?.model || DEFAULT_MODEL;
 
-  const rows = resultsResult.rows as unknown as EvaluationResultRow[];
   const nonCached = rows.filter((r) => !r.from_cache);
   const avgTime = nonCached.length > 0
     ? nonCached.reduce((sum, r) => sum + r.processing_time, 0) / nonCached.length

@@ -1,5 +1,6 @@
 import { Kysely, PostgresDialect, SqliteDialect, sql } from 'kysely';
 import type { DB } from './schema';
+import { serverLogger } from '../lib/logger';
 
 export type { DB };
 export { sql };
@@ -20,14 +21,14 @@ export function getKysely(): Kysely<DB> {
     _kysely = new Kysely<DB>({
       dialect: new PostgresDialect({ pool: new Pool({ connectionString: DATABASE_URL }) }),
     });
-    console.log('✓ Kysely: using PostgreSQL');
+    serverLogger.info('Kysely: using PostgreSQL');
   } else {
     // Reuse the same SQLite instance that sqlite.ts already created & migrated
     const { rawSqliteDb } = require('./sqlite');
     _kysely = new Kysely<DB>({
       dialect: new SqliteDialect({ database: rawSqliteDb }),
     });
-    console.log('⚠ Kysely: using SQLite in-memory (shared instance)');
+    serverLogger.warn('Kysely: using SQLite in-memory (shared instance)');
   }
 
   return _kysely;

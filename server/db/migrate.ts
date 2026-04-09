@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import db from './index';
+import { serverLogger } from '../lib/logger';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_DIR = path.join(__dirname, 'migrations');
@@ -12,7 +13,7 @@ const MIGRATIONS_DIR = path.join(__dirname, 'migrations');
  */
 export async function runMigrations(): Promise<void> {
   if (!process.env.DATABASE_URL && !process.env.DB_HOST) {
-    console.log('⚠ Skipping migrations (no database configured, using in-memory storage)');
+    serverLogger.info('Skipping migrations (no database configured, using in-memory storage)');
     return;
   }
 
@@ -37,14 +38,14 @@ export async function runMigrations(): Promise<void> {
     if (executedVersions.has(file)) continue;
 
     const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, file), 'utf-8');
-    console.log(`Running migration: ${file}`);
+    serverLogger.info(`Running migration: ${file}`);
 
     try {
       await db.query(sql);
       await db.query('INSERT INTO schema_migrations (version) VALUES ($1)', [file]);
-      console.log(`✓ Migration ${file} completed`);
+      serverLogger.info(`Migration ${file} completed`);
     } catch (error) {
-      console.error(`✗ Migration ${file} failed:`, error);
+      serverLogger.error(`Migration ${file} failed`, error instanceof Error ? error : new Error(String(error)));
       throw error;
     }
   }

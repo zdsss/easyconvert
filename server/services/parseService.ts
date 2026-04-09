@@ -69,7 +69,7 @@ export const parseService = {
     const job = jobResult.rows[0];
 
     jobQueue.enqueue({
-      id: job.id,
+      id: job.id as string,
       status: 'pending',
       execute: async () => {
         await db.query('UPDATE parse_jobs SET status = $1, started_at = NOW() WHERE id = $2', ['processing', job.id]);
@@ -98,7 +98,7 @@ export const parseService = {
 
         if (webhookUrl) {
           const payload: WebhookPayload = {
-            jobId: job.id,
+            jobId: job.id as string,
             status: finalStatus,
             completedAt: new Date().toISOString(),
           };
@@ -116,7 +116,7 @@ export const parseService = {
       },
     });
 
-    return { id: job.id, status: 'pending' };
+    return { id: job.id as string, status: 'pending' };
   },
 
   /** Get job status by ID */
@@ -126,19 +126,19 @@ export const parseService = {
 
     const job = result.rows[0];
     const response: JobResponse = {
-      jobId: job.id,
-      status: job.status,
-      fileName: job.file_name,
-      createdAt: job.created_at,
+      jobId: job.id as string,
+      status: job.status as string,
+      fileName: job.file_name as string,
+      createdAt: job.created_at as string,
     };
 
     if (job.status === 'completed') {
       response.result = typeof job.result === 'string' ? JSON.parse(job.result) : job.result;
-      response.processingTime = job.processing_time;
-      response.completedAt = job.completed_at;
+      response.processingTime = job.processing_time as number;
+      response.completedAt = job.completed_at as string;
     } else if (job.status === 'failed') {
-      response.error = job.error;
-      response.completedAt = job.completed_at;
+      response.error = job.error as string;
+      response.completedAt = job.completed_at as string;
     }
 
     return response;
@@ -161,10 +161,10 @@ export const parseService = {
       );
 
       const job = jobResult.rows[0];
-      jobIds.push(job.id);
+      jobIds.push(job.id as string);
 
       jobQueue.enqueue({
-        id: job.id,
+        id: job.id as string,
         status: 'pending',
         execute: async () => {
           await db.query('UPDATE parse_jobs SET status = $1, started_at = NOW() WHERE id = $2', ['processing', job.id]);

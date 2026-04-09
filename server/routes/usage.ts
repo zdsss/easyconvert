@@ -46,10 +46,10 @@ router.get('/', async (req, res) => {
         [days]
       );
 
-      const total = parseInt(summaryResult.rows[0]?.total) || 0;
-      const successCount = parseInt(summaryResult.rows[0]?.success_count) || 0;
-      const avgLatency = parseFloat(summaryResult.rows[0]?.avg_latency) || 0;
-      const totalTokens = parseInt(summaryResult.rows[0]?.total_tokens) || 0;
+      const total = parseInt(String(summaryResult.rows[0]?.total)) || 0;
+      const successCount = parseInt(String(summaryResult.rows[0]?.success_count)) || 0;
+      const avgLatency = parseFloat(String(summaryResult.rows[0]?.avg_latency)) || 0;
+      const totalTokens = parseInt(String(summaryResult.rows[0]?.total_tokens)) || 0;
       const successRate = total > 0 ? (successCount / total) * 100 : 0;
 
       // 按天分组请求数
@@ -95,11 +95,11 @@ router.get('/', async (req, res) => {
 
       const lr = latencyResult.rows[0] || {};
       const latencyDistribution = [
-        { bucket: '<100ms', count: parseInt(lr.lt100) || 0 },
-        { bucket: '100-500ms', count: parseInt(lr.lt500) || 0 },
-        { bucket: '500ms-1s', count: parseInt(lr.lt1000) || 0 },
-        { bucket: '1-3s', count: parseInt(lr.lt3000) || 0 },
-        { bucket: '>3s', count: parseInt(lr.gt3000) || 0 },
+        { bucket: '<100ms', count: parseInt(String(lr.lt100)) || 0 },
+        { bucket: '100-500ms', count: parseInt(String(lr.lt500)) || 0 },
+        { bucket: '500ms-1s', count: parseInt(String(lr.lt1000)) || 0 },
+        { bucket: '1-3s', count: parseInt(String(lr.lt3000)) || 0 },
+        { bucket: '>3s', count: parseInt(String(lr.gt3000)) || 0 },
       ];
 
       // 按端点分组（从 result->>'endpoint' 或按 mime_type 近似）
@@ -180,14 +180,14 @@ router.get('/overview', async (req, res) => {
           'SELECT COUNT(*) as count FROM api_keys WHERE tenant_id = $1 AND is_active = TRUE',
           [tenantId]
         );
-        activeKeys = parseInt(keysResult.rows[0]?.count) || 0;
+        activeKeys = parseInt(String(keysResult.rows[0]?.count)) || 0;
       }
 
       // 总请求数（7天）
       const reqResult = await db.query(
         `SELECT COUNT(*) as total FROM parse_jobs WHERE created_at > NOW() - INTERVAL '7 days'`
       );
-      const totalRequests = parseInt(reqResult.rows[0]?.total) || 0;
+      const totalRequests = parseInt(String(reqResult.rows[0]?.total)) || 0;
 
       // 7天每日请求趋势
       const trendResult = await db.query(
@@ -219,7 +219,7 @@ router.get('/overview', async (req, res) => {
       const recentResult = await db.query(
         `SELECT COUNT(*) as count FROM parse_jobs WHERE created_at > NOW() - INTERVAL '1 minute'`
       );
-      const recentCount = parseInt(recentResult.rows[0]?.count) || 0;
+      const recentCount = parseInt(String(recentResult.rows[0]?.count)) || 0;
       // Use actual tenant quota if available, fallback to 100
       const tenantQuota = 100; // overview endpoint has no auth context; use default
       const rateLimitUsage = Math.min((recentCount / tenantQuota) * 100, 100);

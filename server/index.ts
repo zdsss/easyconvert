@@ -79,6 +79,17 @@ app.use('/api/v1/parse', upload.single('file'), parseRouter);
 app.post('/api/alerts/webhook', express.json(), async (req, res) => {
   const { webhookUrl, message, rule } = req.body;
   if (!webhookUrl) return res.status(400).json({ error: 'webhookUrl required' });
+
+  // Validate URL format and length
+  try {
+    const url = new URL(webhookUrl);
+    if (!['http:', 'https:'].includes(url.protocol)) {
+      return res.status(400).json({ error: 'webhookUrl must use http or https' });
+    }
+  } catch {
+    return res.status(400).json({ error: 'Invalid webhookUrl format' });
+  }
+
   const success = await deliverWebhook(webhookUrl, { message, rule, timestamp: new Date().toISOString() });
   if (success) {
     res.json({ success: true });

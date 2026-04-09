@@ -19,7 +19,7 @@ export function errorHandler(err: Error, req: Request, res: Response, _next: Nex
   }
 
   // JSON parse error
-  if ((err as unknown as Record<string, unknown>).type === 'entity.parse.failed') {
+  if ('type' in err && (err as { type?: string }).type === 'entity.parse.failed') {
     res.status(400).json({ error: 'Invalid JSON' });
     return;
   }

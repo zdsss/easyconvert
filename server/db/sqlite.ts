@@ -227,8 +227,7 @@ function serializeParam(value: unknown): unknown {
 // ---------------------------------------------------------------------------
 
 export const betterSqliteDb = {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async query<T = Record<string, any>>(text: string, params?: unknown[]): Promise<{ rows: T[]; rowCount: number }> {
+  async query<T = Record<string, unknown>>(text: string, params?: unknown[]): Promise<{ rows: T[]; rowCount: number }> {
     const serializedParams = (params || []).map(serializeParam);
 
     // Handle RETURNING clause
