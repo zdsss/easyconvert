@@ -1,44 +1,45 @@
 import { Link, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import Icon from './ui/Icon';
 
 interface NavItem {
   path: string;
-  label: string;
+  labelKey: string;
   icon: string;
   match?: RegExp;
 }
 
 interface NavGroup {
-  title: string;
+  titleKey: string;
   items: NavItem[];
 }
 
 const NAV_GROUPS: NavGroup[] = [
   {
-    title: '解析',
+    titleKey: 'nav.parse',
     items: [
-      { path: '/parse', label: '解析简历', icon: 'file-text', match: /^\/parse$/ },
-      { path: '/parse/batch', label: '批量处理', icon: 'layers', match: /^\/parse\/batch/ },
-      { path: '/parse/monitor', label: '监控仪表盘', icon: 'activity', match: /^\/parse\/monitor/ },
-      { path: '/parse/history', label: '解析历史', icon: 'clock', match: /^\/parse\/history/ },
+      { path: '/parse', labelKey: 'nav.parse', icon: 'file-text', match: /^\/parse$/ },
+      { path: '/parse/batch', labelKey: 'nav.batch', icon: 'layers', match: /^\/parse\/batch/ },
+      { path: '/parse/monitor', labelKey: 'nav.monitor', icon: 'activity', match: /^\/parse\/monitor/ },
+      { path: '/parse/history', labelKey: 'nav.history', icon: 'clock', match: /^\/parse\/history/ },
     ],
   },
   {
-    title: '评测',
+    titleKey: 'nav.evaluation',
     items: [
-      { path: '/evaluation', label: '任务列表', icon: 'clipboard', match: /^\/evaluation(?!\/new)/ },
-      { path: '/evaluation/new', label: '新建任务', icon: 'plus', match: /^\/evaluation\/new/ },
-      { path: '/data-flywheel', label: '数据飞轮', icon: 'refresh-cw', match: /^\/data-flywheel/ },
-      { path: '/prompt-lab', label: '提示词实验室', icon: 'settings', match: /^\/prompt-lab/ },
+      { path: '/evaluation', labelKey: 'nav.evaluation', icon: 'clipboard', match: /^\/evaluation(?!\/new)/ },
+      { path: '/evaluation/new', labelKey: 'nav.newEvaluation', icon: 'plus', match: /^\/evaluation\/new/ },
+      { path: '/data-flywheel', labelKey: 'nav.dataFlywheel', icon: 'refresh-cw', match: /^\/data-flywheel/ },
+      { path: '/prompt-lab', labelKey: 'nav.promptLab', icon: 'settings', match: /^\/prompt-lab/ },
     ],
   },
   {
-    title: 'API 管理',
+    titleKey: 'nav.apiOverview',
     items: [
-      { path: '/api', label: '概览', icon: 'globe', match: /^\/api$/ },
-      { path: '/api/keys', label: 'Keys', icon: 'key', match: /^\/api\/keys/ },
-      { path: '/api/usage', label: '用量', icon: 'bar-chart', match: /^\/api\/usage/ },
-      { path: '/tenants', label: '租户管理', icon: 'users', match: /^\/tenants/ },
+      { path: '/api', labelKey: 'nav.apiOverview', icon: 'globe', match: /^\/api$/ },
+      { path: '/api/keys', labelKey: 'nav.apiKeys', icon: 'key', match: /^\/api\/keys/ },
+      { path: '/api/usage', labelKey: 'nav.apiUsage', icon: 'bar-chart', match: /^\/api\/usage/ },
+      { path: '/tenants', labelKey: 'nav.tenants', icon: 'users', match: /^\/tenants/ },
     ],
   },
 ];
@@ -52,6 +53,7 @@ interface Props {
 
 export default function Sidebar({ collapsed, onCollapse, mobileOpen, onMobileClose }: Props) {
   const location = useLocation();
+  const { t } = useTranslation();
 
   const isActive = (item: NavItem) => {
     if (item.match) return item.match.test(location.pathname);
@@ -81,15 +83,16 @@ export default function Sidebar({ collapsed, onCollapse, mobileOpen, onMobileClo
       {/* Navigation */}
       <nav className="flex-1 py-3 px-2 overflow-y-auto">
         {NAV_GROUPS.map(group => (
-          <div key={group.title} className="mb-4">
+          <div key={group.titleKey} className="mb-4">
             {!collapsed && (
               <div className="px-3 mb-1.5 text-xs font-semibold text-text-tertiary uppercase tracking-wider">
-                {group.title}
+                {t(group.titleKey)}
               </div>
             )}
             <div className="space-y-0.5">
               {group.items.map(item => {
                 const active = isActive(item);
+                const label = t(item.labelKey);
                 return (
                   <Link
                     key={item.path}
@@ -100,13 +103,13 @@ export default function Sidebar({ collapsed, onCollapse, mobileOpen, onMobileClo
                         ? 'bg-[var(--primary-subtle)] text-brand-700 dark:text-brand-400'
                         : 'text-text-secondary hover:bg-surface-tertiary hover:text-text-primary'
                     }`}
-                    title={collapsed ? item.label : undefined}
+                    title={collapsed ? label : undefined}
                   >
                     {active && (
                       <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-brand-600 rounded-r" />
                     )}
                     <Icon name={item.icon} size={18} className={active ? 'text-brand-600 dark:text-brand-400' : 'text-text-tertiary'} />
-                    {!collapsed && <span>{item.label}</span>}
+                    {!collapsed && <span>{label}</span>}
                   </Link>
                 );
               })}
@@ -120,16 +123,13 @@ export default function Sidebar({ collapsed, onCollapse, mobileOpen, onMobileClo
         <button
           onClick={() => onCollapse(!collapsed)}
           className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm text-text-tertiary hover:bg-surface-tertiary transition-colors duration-150"
-          title={collapsed ? '展开侧栏' : '收起侧栏'}
         >
           <Icon name={collapsed ? 'chevron-right' : 'chevron-left'} size={16} />
-          {!collapsed && <span className="text-xs">收起</span>}
         </button>
       </div>
     </aside>
   );
 
-  // Mobile overlay
   if (mobileOpen) {
     return (
       <>
@@ -139,6 +139,5 @@ export default function Sidebar({ collapsed, onCollapse, mobileOpen, onMobileClo
     );
   }
 
-  // Desktop
   return <div className="hidden md:block">{sidebarContent}</div>;
 }

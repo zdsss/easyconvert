@@ -1,19 +1,20 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { ProcessTrace } from '@lib/processTracer';
 
 interface Props {
   trace: ProcessTrace;
 }
 
-const STAGE_LABELS: Record<string, string> = {
-  file_upload: '文件上传',
-  file_parse: '文件解析',
-  difficulty_classify: '难度分类',
-  strategy_select: '策略选择',
-  llm_extract: 'LLM 提取',
-  content_classify: '内容分类',
-  validation: '验证',
-  cache_store: '缓存存储',
+const STAGE_LABEL_KEYS: Record<string, string> = {
+  file_upload: 'timeline.fileUpload',
+  file_parse: 'timeline.fileParse',
+  difficulty_classify: 'timeline.difficultyClassify',
+  strategy_select: 'timeline.strategySelect',
+  llm_extract: 'timeline.llmExtract',
+  content_classify: 'timeline.contentClassify',
+  validation: 'timeline.validation',
+  cache_store: 'timeline.cacheStore',
 };
 
 const STAGE_COLORS: Record<string, string> = {
@@ -28,15 +29,17 @@ const STAGE_COLORS: Record<string, string> = {
 };
 
 function ProcessTimeline({ trace }: Props) {
+  const { t } = useTranslation();
+
   if (!trace?.stages?.length) {
-    return <div className="text-sm text-text-tertiary">无处理时间线数据</div>;
+    return <div className="text-sm text-text-tertiary">{t('timeline.noData')}</div>;
   }
 
   const maxDuration = Math.max(...trace.stages.map(s => s.duration || 0), 1);
 
   return (
     <div>
-      <h3 className="text-xs font-semibold text-text-tertiary uppercase tracking-wide mb-3">处理时间线</h3>
+      <h3 className="text-xs font-semibold text-text-tertiary uppercase tracking-wide mb-3">{t('timeline.title')}</h3>
       <div className="space-y-2">
         {trace.stages.map((stage) => {
           const width = maxDuration > 0 ? ((stage.duration || 0) / maxDuration) * 100 : 0;
@@ -45,7 +48,7 @@ function ProcessTimeline({ trace }: Props) {
           return (
             <div key={stage.name} className="flex items-center gap-3">
               <div className="w-20 text-xs text-text-tertiary text-right shrink-0">
-                {STAGE_LABELS[stage.name] || stage.name}
+                {t(STAGE_LABEL_KEYS[stage.name] || stage.name)}
               </div>
               <div className="flex-1 bg-surface-tertiary rounded-full h-5 relative overflow-hidden">
                 <div
@@ -59,17 +62,17 @@ function ProcessTimeline({ trace }: Props) {
               </div>
               <div className="w-12 text-xs text-text-tertiary shrink-0">
                 {stage.status === 'completed' ? (
-                  <span className="text-status-success">完成</span>
+                  <span className="text-status-success">{t('timeline.completed')}</span>
                 ) : stage.status === 'failed' ? (
-                  <span className="text-status-error">失败</span>
-                ) : '处理中'}
+                  <span className="text-status-error">{t('timeline.failed')}</span>
+                ) : t('timeline.processing')}
               </div>
             </div>
           );
         })}
       </div>
       <div className="mt-2 text-xs text-text-tertiary text-right">
-        总耗时: {trace.totalDuration}ms
+        {t('timeline.totalTime')}: {trace.totalDuration}ms
       </div>
     </div>
   );

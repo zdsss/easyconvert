@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import AppLayout from './components/AppLayout'
 import ErrorBoundary from './components/ErrorBoundary'
 import ToastContainer from './components/ui/Toast'
+import './i18n'
 import './index.css'
 
 const ParsePage = lazy(() => import('./pages/ParsePage'))
