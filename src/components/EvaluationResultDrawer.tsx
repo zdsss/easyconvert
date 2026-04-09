@@ -133,7 +133,7 @@ function ParsedTab({ result }: { result: EvaluationResult }) {
         <div>
           <div className="text-xs font-semibold text-text-tertiary uppercase tracking-wide mb-2">技能</div>
           <div className="flex flex-wrap gap-1.5">
-            {r.skills!.map((s: string, i: number) => (
+            {r.skills?.map((s: string, i: number) => (
               <span key={i} className="badge-info">{s}</span>
             ))}
           </div>

@@ -102,7 +102,7 @@ function WorkTab({ resume }: { resume: Resume }) {
           </div>
           {w.highlights && w.highlights.length > 0 && (
             <ul className="mt-2 space-y-1">
-              {w.highlights!.map((h, j) => (
+              {w.highlights?.map((h, j) => (
                 <li key={j} className="text-xs text-text-secondary flex gap-1.5">
                   <span className="text-text-tertiary mt-0.5">·</span>
                   {h}
