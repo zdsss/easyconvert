@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import path from 'path';
 import multer from 'multer';
 import { fileURLToPath } from 'url';
@@ -9,6 +10,7 @@ import { runMigrations } from './db';
 import { authMiddleware } from './middleware/auth';
 import { rateLimitMiddleware } from './middleware/rateLimit';
 import { requestLoggerMiddleware } from './middleware/requestLogger';
+import { internalAuthMiddleware } from './middleware/internalAuth';
 import { serverLogger } from './lib/logger';
 import { swaggerSpec } from './lib/swagger';
 import { deliverWebhook } from './lib/webhookDelivery';
@@ -43,6 +45,7 @@ const upload = multer({
 });
 
 // 全局中间件
+app.use(helmet({ contentSecurityPolicy: false })); // CSP disabled for SPA compatibility
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(requestLoggerMiddleware);
@@ -54,16 +57,16 @@ app.use('/test-resumes', express.static(path.join(__dirname, '../test-resumes'))
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.get('/api/docs.json', (_req, res) => res.json(swaggerSpec));
 
-// 内部路由（无需认证 — 前端管理页面使用）
-app.use('/api/evaluations', evaluationsRouter);
-app.use('/api/annotations', annotationsRouter);
-app.use('/api/reports', reportsRouter);
-app.use('/api/keys', keysRouter);
-app.use('/api/usage', usageRouter);
-app.use('/api/parse-history', parseHistoryRouter);
-app.use('/api/tenants', tenantsRouter);
-app.use('/api/data-flywheel', dataFlywheelRouter);
-app.use('/api/prompt-experiments', promptExpRouter);
+// 内部路由（可选认证 — 设置 INTERNAL_API_TOKEN 环境变量启用）
+app.use('/api/evaluations', internalAuthMiddleware, evaluationsRouter);
+app.use('/api/annotations', internalAuthMiddleware, annotationsRouter);
+app.use('/api/reports', internalAuthMiddleware, reportsRouter);
+app.use('/api/keys', internalAuthMiddleware, keysRouter);
+app.use('/api/usage', internalAuthMiddleware, usageRouter);
+app.use('/api/parse-history', internalAuthMiddleware, parseHistoryRouter);
+app.use('/api/tenants', internalAuthMiddleware, tenantsRouter);
+app.use('/api/data-flywheel', internalAuthMiddleware, dataFlywheelRouter);
+app.use('/api/prompt-experiments', internalAuthMiddleware, promptExpRouter);
 
 // 外部 API 路由（需认证 + 限流 — 第三方调用）
 app.use('/api/v1', authMiddleware);
