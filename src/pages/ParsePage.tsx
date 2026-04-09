@@ -117,11 +117,11 @@ export default function ParsePage() {
 
         {/* Error */}
         {error && (
-          <div className="flex items-start gap-3 p-4 rounded-lg bg-status-error-bg border border-red-200 dark:border-red-800">
+          <div className="flex items-start gap-3 p-4 rounded-lg bg-status-error-bg border border-status-error/20">
             <Icon name="alert-triangle" size={18} className="text-status-error shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-medium text-red-800 dark:text-red-400">处理失败</p>
-              <p className="text-sm text-red-600 dark:text-red-300 mt-0.5">{error}</p>
+              <p className="text-sm font-medium text-status-error">处理失败</p>
+              <p className="text-sm text-status-error/80 mt-0.5">{error}</p>
             </div>
           </div>
         )}

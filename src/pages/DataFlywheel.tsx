@@ -17,7 +17,7 @@ interface Candidate {
 
 function ConfidenceBar({ value }: { value: number }) {
   const pct = Math.round(value * 100);
-  const color = pct < 30 ? 'bg-red-500' : pct < 50 ? 'bg-orange-500' : 'bg-yellow-500';
+  const color = pct < 30 ? 'bg-status-error' : pct < 50 ? 'bg-status-warning' : 'bg-status-warning/60';
   return (
     <div className="flex items-center gap-2">
       <div className="flex-1 h-2 bg-surface-tertiary rounded-full overflow-hidden max-w-[100px]">
@@ -127,9 +127,9 @@ export default function DataFlywheel() {
       </div>
 
       {error && (
-        <div className="mb-5 flex items-start gap-3 p-4 rounded-lg bg-status-error-bg border border-red-200 dark:border-red-800">
+        <div className="mb-5 flex items-start gap-3 p-4 rounded-lg bg-status-error-bg border border-status-error/20">
           <Icon name="alert-triangle" size={16} className="text-status-error shrink-0 mt-0.5" />
-          <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+          <p className="text-sm text-status-error">{error}</p>
         </div>
       )}
 

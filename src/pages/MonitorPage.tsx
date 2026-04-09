@@ -213,9 +213,9 @@ export default function MonitorPage() {
               <p className="text-xs text-text-secondary">命中</p>
               <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400">{cacheStats.hits}</p>
             </div>
-            <div className="p-3 bg-status-error-bg dark:bg-red-900/20 rounded-lg text-center">
+            <div className="p-3 bg-status-error/10 rounded-lg text-center">
               <p className="text-xs text-text-secondary">未命中</p>
-              <p className="text-lg font-bold text-red-700 dark:text-red-400">{cacheStats.misses}</p>
+              <p className="text-lg font-bold text-status-error">{cacheStats.misses}</p>
             </div>
           </div>
         </div>

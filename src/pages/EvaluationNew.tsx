@@ -94,9 +94,9 @@ export default function EvaluationNew() {
       </div>
 
       {error && (
-        <div className="mb-5 flex items-start gap-3 p-4 rounded-lg bg-status-error-bg border border-red-200 dark:border-red-800">
+        <div className="mb-5 flex items-start gap-3 p-4 rounded-lg bg-status-error-bg border border-status-error/20">
           <Icon name="alert-triangle" size={16} className="text-status-error shrink-0 mt-0.5" />
-          <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+          <p className="text-sm text-status-error">{error}</p>
         </div>
       )}
 

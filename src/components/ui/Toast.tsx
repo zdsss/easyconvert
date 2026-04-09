@@ -23,10 +23,10 @@ const ICONS: Record<ToastType, string> = {
 };
 
 const COLORS: Record<ToastType, { border: string; bg: string; text: string }> = {
-  success: { border: 'border-l-status-success', bg: 'bg-surface', text: 'text-emerald-700 dark:text-emerald-400' },
-  error: { border: 'border-l-status-error', bg: 'bg-surface', text: 'text-red-700 dark:text-red-400' },
-  warning: { border: 'border-l-status-warning', bg: 'bg-surface', text: 'text-amber-700 dark:text-amber-400' },
-  info: { border: 'border-l-status-info', bg: 'bg-surface', text: 'text-blue-700 dark:text-blue-400' },
+  success: { border: 'border-l-status-success', bg: 'bg-surface', text: 'text-status-success' },
+  error: { border: 'border-l-status-error', bg: 'bg-surface', text: 'text-status-error' },
+  warning: { border: 'border-l-status-warning', bg: 'bg-surface', text: 'text-status-warning' },
+  info: { border: 'border-l-status-info', bg: 'bg-surface', text: 'text-status-info' },
 };
 
 export default function ToastContainer() {

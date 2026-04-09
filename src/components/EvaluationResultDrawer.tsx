@@ -152,7 +152,7 @@ function ParsedTab({ result }: { result: EvaluationResult }) {
 
 function ConfidenceBadge({ score }: { score?: number }) {
   if (score === undefined) return null;
-  const cls = score >= 0.9 ? 'bg-emerald-500' : score >= 0.7 ? 'bg-amber-500' : 'bg-red-500';
+  const cls = score >= 0.9 ? 'bg-status-success' : score >= 0.7 ? 'bg-status-warning' : 'bg-status-error';
   return (
     <span className={`ml-1 px-1 py-0.5 rounded text-xs text-white font-mono ${cls}`}>
       {(score * 100).toFixed(0)}%
