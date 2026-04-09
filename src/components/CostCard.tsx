@@ -1,3 +1,4 @@
+import React from 'react';
 import Icon from '@components/ui/Icon';
 
 interface CostData {
@@ -15,7 +16,7 @@ interface Props {
   cost: CostData;
 }
 
-export default function CostCard({ cost }: Props) {
+function CostCard({ cost }: Props) {
   return (
     <div className="card p-5">
       <h3 className="section-title flex items-center gap-2 mb-4">
@@ -52,3 +53,5 @@ export default function CostCard({ cost }: Props) {
     </div>
   );
 }
+
+export default React.memo(CostCard);

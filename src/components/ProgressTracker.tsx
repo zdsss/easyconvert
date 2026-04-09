@@ -95,7 +95,7 @@ export default function ProgressTracker({ stages, currentStage }: Props) {
           </span>
           <span className="text-text-tertiary font-mono">{percentage}%</span>
         </div>
-        <div className="w-full bg-surface-tertiary rounded-full h-1.5 overflow-hidden">
+        <div className="w-full bg-surface-tertiary rounded-full h-1.5 overflow-hidden" role="progressbar" aria-valuenow={percentage} aria-valuemin={0} aria-valuemax={100}>
           <div
             className="bg-brand-600 h-1.5 rounded-full transition-all duration-500 ease-smooth"
             style={{ width: `${percentage}%` }}

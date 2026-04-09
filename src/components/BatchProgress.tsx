@@ -28,7 +28,7 @@ export default function BatchProgress() {
             并发: {concurrency.active} 处理中 / {concurrency.queued} 等待中
           </span>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-2">
+        <div className="w-full bg-gray-200 rounded-full h-2" role="progressbar" aria-valuenow={Math.round((overall.current / overall.total) * 100)} aria-valuemin={0} aria-valuemax={100}>
           <div
             className="bg-blue-500 h-2 rounded-full transition-all duration-300"
             style={{ width: `${(overall.current / overall.total) * 100}%` }}

@@ -1,3 +1,4 @@
+import React from 'react';
 import type { ProcessTrace } from '@lib/processTracer';
 
 interface Props {
@@ -26,7 +27,7 @@ const STAGE_COLORS: Record<string, string> = {
   cache_store: 'bg-status-info',
 };
 
-export default function ProcessTimeline({ trace }: Props) {
+function ProcessTimeline({ trace }: Props) {
   if (!trace?.stages?.length) {
     return <div className="text-sm text-gray-400">无处理时间线数据</div>;
   }
@@ -73,3 +74,5 @@ export default function ProcessTimeline({ trace }: Props) {
     </div>
   );
 }
+
+export default React.memo(ProcessTimeline);

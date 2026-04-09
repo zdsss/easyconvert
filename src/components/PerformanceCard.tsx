@@ -1,10 +1,11 @@
+import React from 'react';
 import Icon from '@components/ui/Icon';
 
 interface Props {
   performance: { p50: number; p95: number; p99: number };
 }
 
-export default function PerformanceCard({ performance }: Props) {
+function PerformanceCard({ performance }: Props) {
   return (
     <div className="card p-5">
       <h3 className="section-title flex items-center gap-2 mb-4">
@@ -29,3 +30,5 @@ export default function PerformanceCard({ performance }: Props) {
     </div>
   );
 }
+
+export default React.memo(PerformanceCard);

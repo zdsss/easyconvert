@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useEvaluationStore } from '@lib/store/evaluationStore';
 import { evaluationApi } from '@lib/api/evaluationApi';
@@ -42,27 +42,30 @@ export default function EvaluationList() {
     }
   };
 
-  let filteredTasks = statusFilter === 'all' ? tasks : tasks.filter(t => t.status === statusFilter);
-  if (searchQuery) {
-    const q = searchQuery.toLowerCase();
-    filteredTasks = filteredTasks.filter(t => t.name.toLowerCase().includes(q) || t.description?.toLowerCase().includes(q));
-  }
-  filteredTasks = [...filteredTasks].sort((a, b) =>
-    sortBy === 'date' ? b.createdAt.getTime() - a.createdAt.getTime() : a.name.localeCompare(b.name)
-  );
+  const filteredTasks = useMemo(() => {
+    let result = statusFilter === 'all' ? tasks : tasks.filter(t => t.status === statusFilter);
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(t => t.name.toLowerCase().includes(q) || t.description?.toLowerCase().includes(q));
+    }
+    result = [...result].sort((a, b) =>
+      sortBy === 'date' ? b.createdAt.getTime() - a.createdAt.getTime() : a.name.localeCompare(b.name)
+    );
+    return result;
+  }, [tasks, statusFilter, searchQuery, sortBy]);
 
   const totalItems = filteredTasks.length;
   const paginatedTasks = filteredTasks.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   useEffect(() => { setCurrentPage(1); }, [statusFilter, searchQuery, sortBy]);
 
-  const statusCounts = {
+  const statusCounts = useMemo(() => ({
     all: tasks.length,
     pending: tasks.filter(t => t.status === 'pending').length,
     processing: tasks.filter(t => t.status === 'processing').length,
     completed: tasks.filter(t => t.status === 'completed').length,
     failed: tasks.filter(t => t.status === 'failed').length,
-  };
+  }), [tasks]);
 
   const toggleSelect = (taskId: string, checked: boolean) => {
     const next = new Set(selectedIds);

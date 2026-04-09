@@ -1,3 +1,4 @@
+import React from 'react';
 import Icon from '@components/ui/Icon';
 import { STATUS_MAP } from '@lib/utils';
 import type { EvaluationTask } from '@lib/store/evaluationStore';
@@ -9,7 +10,7 @@ interface Props {
   onClick: () => void;
 }
 
-export default function EvaluationCard({ task, selected, onSelect, onClick }: Props) {
+function EvaluationCard({ task, selected, onSelect, onClick }: Props) {
   const statusInfo = STATUS_MAP[task.status] || STATUS_MAP.pending;
   const total = task.stats.totalFiles;
   const processed = task.stats.processedFiles || (task.stats.successCount + task.stats.failureCount);
@@ -26,7 +27,7 @@ export default function EvaluationCard({ task, selected, onSelect, onClick }: Pr
           className="w-4 h-4 rounded border-border text-brand-600 focus:ring-brand-500 cursor-pointer"
         />
       </div>
-      <div onClick={onClick}>
+      <div onClick={onClick} tabIndex={0} onKeyDown={e => { if (e.key === 'Enter') onClick(); }}>
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
@@ -75,3 +76,5 @@ export default function EvaluationCard({ task, selected, onSelect, onClick }: Pr
     </div>
   );
 }
+
+export default React.memo(EvaluationCard);

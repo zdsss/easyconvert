@@ -1,3 +1,4 @@
+import React from 'react';
 import type { Resume } from '@lib/types';
 
 interface Props {
@@ -33,7 +34,7 @@ const STATUS_STYLES = {
   mismatch: { row: 'bg-status-error-bg', badge: 'badge-error', label: '不匹配' },
 };
 
-export default function ComparisonView({ parsed, annotation }: Props) {
+function ComparisonView({ parsed, annotation }: Props) {
   const fields = [
     'basics.name', 'basics.email', 'basics.phone', 'basics.title', 'basics.location',
   ];
@@ -117,3 +118,5 @@ export default function ComparisonView({ parsed, annotation }: Props) {
     </div>
   );
 }
+
+export default React.memo(ComparisonView);
