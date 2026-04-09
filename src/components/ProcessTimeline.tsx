@@ -29,22 +29,22 @@ const STAGE_COLORS: Record<string, string> = {
 
 function ProcessTimeline({ trace }: Props) {
   if (!trace?.stages?.length) {
-    return <div className="text-sm text-gray-400">无处理时间线数据</div>;
+    return <div className="text-sm text-text-tertiary">无处理时间线数据</div>;
   }
 
   const maxDuration = Math.max(...trace.stages.map(s => s.duration || 0), 1);
 
   return (
     <div>
-      <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">处理时间线</h3>
+      <h3 className="text-xs font-semibold text-text-tertiary uppercase tracking-wide mb-3">处理时间线</h3>
       <div className="space-y-2">
         {trace.stages.map((stage) => {
           const width = maxDuration > 0 ? ((stage.duration || 0) / maxDuration) * 100 : 0;
-          const color = STAGE_COLORS[stage.name] || 'bg-gray-400';
+          const color = STAGE_COLORS[stage.name] || 'bg-text-tertiary';
 
           return (
             <div key={stage.name} className="flex items-center gap-3">
-              <div className="w-20 text-xs text-gray-500 text-right shrink-0">
+              <div className="w-20 text-xs text-text-tertiary text-right shrink-0">
                 {STAGE_LABELS[stage.name] || stage.name}
               </div>
               <div className="flex-1 bg-surface-tertiary rounded-full h-5 relative overflow-hidden">
@@ -57,7 +57,7 @@ function ProcessTimeline({ trace }: Props) {
                   )}
                 </div>
               </div>
-              <div className="w-12 text-xs text-gray-400 shrink-0">
+              <div className="w-12 text-xs text-text-tertiary shrink-0">
                 {stage.status === 'completed' ? (
                   <span className="text-status-success">完成</span>
                 ) : stage.status === 'failed' ? (
@@ -68,7 +68,7 @@ function ProcessTimeline({ trace }: Props) {
           );
         })}
       </div>
-      <div className="mt-2 text-xs text-gray-400 text-right">
+      <div className="mt-2 text-xs text-text-tertiary text-right">
         总耗时: {trace.totalDuration}ms
       </div>
     </div>

@@ -33,6 +33,78 @@ export interface ParseResult {
   validation?: unknown;
 }
 
+/** Create a parse_jobs row and enqueue processing */
+async function createAndExecuteJob(
+  file: ServerFileInput,
+  tenantId: string | null,
+  apiKeyId: string | null,
+  webhookUrl?: string,
+): Promise<string> {
+  const params = [tenantId, apiKeyId, file.name, file.size, file.mimeType];
+  const jobResult = webhookUrl
+    ? await db.query(
+        `INSERT INTO parse_jobs (tenant_id, api_key_id, file_name, file_size, mime_type, webhook_url)
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+        [...params, webhookUrl]
+      )
+    : await db.query(
+        `INSERT INTO parse_jobs (tenant_id, api_key_id, file_name, file_size, mime_type)
+         VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+        params
+      );
+
+  const job = jobResult.rows[0];
+  const jobId = job.id as string;
+
+  jobQueue.enqueue({
+    id: jobId,
+    status: 'pending',
+    execute: async () => {
+      await db.query('UPDATE parse_jobs SET status = $1, started_at = NOW() WHERE id = $2', ['processing', jobId]);
+      const startTime = Date.now();
+
+      let finalStatus: 'completed' | 'failed' = 'completed';
+      let jobResultData: unknown = null;
+      let jobError: string | null = null;
+
+      try {
+        const result = await processResume(file);
+        jobResultData = result.resume;
+        await db.query(
+          `UPDATE parse_jobs SET status = $1, result = $2, file_hash = $3, processing_time = $4, completed_at = NOW() WHERE id = $5`,
+          ['completed', JSON.stringify(result.resume), result.hash, Date.now() - startTime, jobId]
+        );
+      } catch (error) {
+        finalStatus = 'failed';
+        jobError = error instanceof Error ? error.message : 'Unknown error';
+        serverLogger.error('Job failed', error instanceof Error ? error : new Error(String(error)), { jobId });
+        await db.query(
+          `UPDATE parse_jobs SET status = $1, error = $2, completed_at = NOW() WHERE id = $3`,
+          ['failed', jobError, jobId]
+        );
+      }
+
+      if (webhookUrl) {
+        const payload: WebhookPayload = {
+          jobId,
+          status: finalStatus,
+          completedAt: new Date().toISOString(),
+        };
+        if (finalStatus === 'completed') payload.result = jobResultData;
+        else payload.error = jobError ?? undefined;
+
+        const delivered = await deliverWebhook(webhookUrl, payload);
+        await db.query(
+          `UPDATE parse_jobs SET webhook_status = $1 WHERE id = $2`,
+          [delivered ? 'delivered' : 'failed', jobId]
+        );
+      }
+    },
+  });
+
+  return jobId;
+}
+
 export const parseService = {
   /** Synchronous parse — process file and return result immediately */
   async syncParse(file: ServerFileInput): Promise<ParseResult> {
@@ -54,69 +126,8 @@ export const parseService = {
     apiKeyId: string | undefined,
     webhookUrl?: string,
   ): Promise<{ id: string; status: string }> {
-    const jobResult = webhookUrl
-      ? await db.query(
-          `INSERT INTO parse_jobs (tenant_id, api_key_id, file_name, file_size, mime_type, webhook_url)
-           VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-          [tenantId || null, apiKeyId || null, file.name, file.size, file.mimeType, webhookUrl]
-        )
-      : await db.query(
-          `INSERT INTO parse_jobs (tenant_id, api_key_id, file_name, file_size, mime_type)
-           VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-          [tenantId || null, apiKeyId || null, file.name, file.size, file.mimeType]
-        );
-
-    const job = jobResult.rows[0];
-
-    jobQueue.enqueue({
-      id: job.id as string,
-      status: 'pending',
-      execute: async () => {
-        await db.query('UPDATE parse_jobs SET status = $1, started_at = NOW() WHERE id = $2', ['processing', job.id]);
-        const startTime = Date.now();
-
-        let finalStatus: 'completed' | 'failed' = 'completed';
-        let jobResultData: unknown = null;
-        let jobError: string | null = null;
-
-        try {
-          const result = await processResume(file);
-          jobResultData = result.resume;
-          await db.query(
-            `UPDATE parse_jobs SET status = $1, result = $2, file_hash = $3, processing_time = $4, completed_at = NOW() WHERE id = $5`,
-            ['completed', JSON.stringify(result.resume), result.hash, Date.now() - startTime, job.id]
-          );
-        } catch (error) {
-          finalStatus = 'failed';
-          jobError = error instanceof Error ? error.message : 'Unknown error';
-          serverLogger.error('Async job failed', error instanceof Error ? error : new Error(String(error)), { jobId: job.id });
-          await db.query(
-            `UPDATE parse_jobs SET status = $1, error = $2, completed_at = NOW() WHERE id = $3`,
-            ['failed', jobError, job.id]
-          );
-        }
-
-        if (webhookUrl) {
-          const payload: WebhookPayload = {
-            jobId: job.id as string,
-            status: finalStatus,
-            completedAt: new Date().toISOString(),
-          };
-          if (finalStatus === 'completed') {
-            payload.result = jobResultData;
-          } else {
-            payload.error = jobError ?? undefined;
-          }
-          const delivered = await deliverWebhook(webhookUrl, payload);
-          await db.query(
-            `UPDATE parse_jobs SET webhook_status = $1 WHERE id = $2`,
-            [delivered ? 'delivered' : 'failed', job.id]
-          );
-        }
-      },
-    });
-
-    return { id: job.id as string, status: 'pending' };
+    const id = await createAndExecuteJob(file, tenantId || null, apiKeyId || null, webhookUrl);
+    return { id, status: 'pending' };
   },
 
   /** Get job status by ID */
@@ -151,42 +162,11 @@ export const parseService = {
     apiKeyId: string | undefined,
   ): Promise<string[]> {
     const jobIds: string[] = [];
-
     for (const f of files) {
       const file: ServerFileInput = { buffer: f.buffer, name: f.originalname, size: f.size, mimeType: f.mimetype };
-      const jobResult = await db.query(
-        `INSERT INTO parse_jobs (tenant_id, api_key_id, file_name, file_size, mime_type)
-         VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-        [tenantId || null, apiKeyId || null, f.originalname, f.size, f.mimetype]
-      );
-
-      const job = jobResult.rows[0];
-      jobIds.push(job.id as string);
-
-      jobQueue.enqueue({
-        id: job.id as string,
-        status: 'pending',
-        execute: async () => {
-          await db.query('UPDATE parse_jobs SET status = $1, started_at = NOW() WHERE id = $2', ['processing', job.id]);
-          const startTime = Date.now();
-
-          try {
-            const result = await processResume(file);
-            await db.query(
-              `UPDATE parse_jobs SET status = $1, result = $2, file_hash = $3, processing_time = $4, completed_at = NOW() WHERE id = $5`,
-              ['completed', JSON.stringify(result.resume), result.hash, Date.now() - startTime, job.id]
-            );
-          } catch (error) {
-            serverLogger.error('Batch job failed', error instanceof Error ? error : new Error(String(error)), { jobId: job.id });
-            await db.query(
-              `UPDATE parse_jobs SET status = $1, error = $2, completed_at = NOW() WHERE id = $3`,
-              ['failed', error instanceof Error ? error.message : 'Unknown error', job.id]
-            );
-          }
-        },
-      });
+      const id = await createAndExecuteJob(file, tenantId || null, apiKeyId || null);
+      jobIds.push(id);
     }
-
     return jobIds;
   },
 
